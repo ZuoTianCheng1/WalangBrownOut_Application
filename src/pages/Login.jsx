@@ -26,7 +26,7 @@ export default function Login() {
     <div className="login-page">
       <div className="login-panel">
         <div className="login-mark"><LockKeyhole size={20} /></div>
-        <p className="kicker">WalangBrownout IMS</p>
+        <p className="kicker">WalangBrownout Inventory Management System</p>
         <h1>Sign in to continue</h1>
         <p className="login-copy">Enter your credentials to access the inventory dashboard.</p>
 
