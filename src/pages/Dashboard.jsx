@@ -48,7 +48,7 @@ export default function Dashboard() {
       <p className="kicker">Dashboard</p>
       <h1 className="page-title">Floor status, right now</h1>
       <p className="page-lede">
-        Everything below is derived live from stock on hand and open batches — not a weekly count.
+         Live stock on hand and open batches.
       </p>
 
       <section className="section">
@@ -85,7 +85,7 @@ export default function Dashboard() {
         <section className="section dashboard-charts">
           <div className="page-header-row chart-section-header">
             <div>
-              <h2 className="section-heading" style={{ marginTop: 0 }}>Inventory visualization</h2>
+              <h2 className="section-heading" style={{ marginTop: 0 }}>Inventory Chart</h2>
               <p className="section-note">Quick views of current quantity by category and stock health.</p>
             </div>
           </div>

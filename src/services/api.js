@@ -31,6 +31,9 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000
 let _items = [...mockItems];
 let _batches = [...mockBatches];
 let _alerts = [...mockAlerts];
+const _batchHistory = new Map(
+  _batches.map((b) => [b.lot_id, [{ id: `${b.lot_id}-received`, type: 'received', quantity: b.qty_received, reason: 'Batch received', date: b.received_date }]])
+);
 
 function delay(data, ms = 200) {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms));
@@ -72,9 +75,39 @@ export async function createItem(item) {
 export async function getBatches(skuId) {
   if (USE_MOCK) {
     const rows = skuId ? _batches.filter((b) => b.sku_id === skuId) : [..._batches];
-    return delay(rows);
+    return delay(rows.map((b) => ({ ...b, history: _batchHistory.get(b.lot_id) ?? [] })));
   }
   return request(`/batches${skuId ? `?sku_id=${encodeURIComponent(skuId)}` : ''}`);
+}
+
+
+/** PATCH /batches/:lot_id/use
+ * body: { quantity, reason }
+ * -> { batch, history }
+ */
+export async function consumeBatch(lotId, quantity, reason = 'Sale') {
+  if (USE_MOCK) {
+    const batch = _batches.find((b) => b.lot_id === lotId);
+    if (!batch) throw new Error('Batch not found.');
+    if (batch.status === 'expired') throw new Error('Expired batches cannot be used.');
+    if (!Number.isInteger(quantity) || quantity <= 0) throw new Error('Quantity must be a positive whole number.');
+    if (quantity > batch.qty_remaining) throw new Error(`Only ${batch.qty_remaining} units are available in this batch.`);
+
+    const updated = { ...batch, qty_remaining: batch.qty_remaining - quantity };
+    _batches = _batches.map((b) => (b.lot_id === lotId ? updated : b));
+    const history = _batchHistory.get(lotId) ?? [];
+    history.unshift({
+      id: `${lotId}-${Date.now()}`,
+      type: 'used',
+      quantity,
+      reason,
+      date: new Date().toISOString().slice(0, 10),
+    });
+    _batchHistory.set(lotId, history);
+    updated.history = history;
+    return delay({ batch: updated, history }, 250);
+  }
+  return request(`/batches/${encodeURIComponent(lotId)}/use`, { method: 'PATCH', body: JSON.stringify({ quantity, reason }) });
 }
 
 /** GET /alerts?status=all

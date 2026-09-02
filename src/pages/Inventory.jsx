@@ -41,13 +41,13 @@ export default function Inventory() {
       <div className="page-header-row">
         <div>
           <p className="kicker">Inventory</p>
-          <h1 className="page-title">All items</h1>
+          <h1 className="page-title">All items.</h1>
         </div>
         <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
           <Plus size={16} /> Add item
         </button>
       </div>
-      <p className="page-lede">Search, filter, and open an item to see its batches in FEFO order.</p>
+      <p className="page-lede">Search, filter, and open an item to see its batches.</p>
 
       <section className="section">
         <div className="toolbar">

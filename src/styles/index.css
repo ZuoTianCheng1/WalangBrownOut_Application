@@ -1,3 +1,14 @@
+/* ============================================================
+   WalangBrownout IMS — Design Tokens
+   Warehouse-floor palette: near-black charcoal, warm amber for
+   pending/reorder alerts, teal for resolved/healthy stock,
+   red-clay reserved only for expired/critical states.
+   Display type: Archivo (condensed, industrial, shipping-label feel)
+   Body type: IBM Plex Sans
+   Data/code type: IBM Plex Mono — used only for real data (SKUs,
+   timestamps, formulas), never as decoration.
+   ============================================================ */
+
 :root {
   --bg: #14171c;
   --surface: #1b1f26;
@@ -1223,4 +1234,48 @@ body {
   .login-panel {
     padding: 28px 22px;
   }
+}
+
+/* ---------- Interactive batches workspace ---------- */
+.batch-kpi-grid { margin-bottom: 4px; }
+.batch-toolbar-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 18px; }
+.batch-fefo-note { display: inline-flex; align-items: center; gap: 7px; font-family: var(--font-mono); font-size: .74rem; color: var(--text-muted); border: 1px solid var(--border-soft); padding: 7px 10px; border-radius: var(--radius-sm); white-space: nowrap; }
+.batch-toolbar { margin-bottom: 16px; }
+.batch-toolbar .search-input { min-width: 260px; }
+.select-with-icon { display: inline-flex; align-items: center; gap: 7px; color: var(--text-faint); }
+.select-with-icon .select-input { min-width: 150px; }
+.batch-table { min-width: 1020px !important; }
+.table-subtext { margin-top: 3px; font-size: .68rem; color: var(--text-faint); }
+.expiry-count { display: inline-flex; align-items: center; gap: 4px; margin-top: 4px; font-size: .72rem; font-family: var(--font-mono); color: var(--text-muted); }
+.expiry-count.warning, .expiry-value.warning { color: var(--text); font-weight: 600; }
+.expiry-count.critical, .expiry-value.critical { color: var(--text); font-weight: 700; text-decoration: underline; }
+.expiry-count.healthy { color: var(--text-faint); }
+.batch-usage-cell { min-width: 115px; color: var(--text-faint) !important; font-family: var(--font-mono); font-size: .68rem !important; }
+.batch-progress { width: 100%; height: 5px; background: #222; border: 1px solid #333; overflow: hidden; border-radius: 999px; margin-bottom: 5px; }
+.batch-progress span { display: block; height: 100%; background: #fff; transition: width .2s ease; }
+.batch-progress.large { height: 8px; margin: 0; }
+.batch-detail-hero { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px; margin-bottom: 22px; }
+.batch-detail-title { font-size: 1.35rem; margin-bottom: 4px; }
+.batch-detail-sub { color: var(--text-faint); font-size: .76rem; }
+.batch-detail-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+.batch-stock-meter { border: 1px solid var(--border-soft); background: var(--surface-raised); border-radius: var(--radius-sm); padding: 13px 14px; margin-bottom: 24px; }
+.batch-stock-meter-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 8px; font-size: .78rem; color: var(--text-muted); }
+.batch-stock-meter-head strong { color: var(--text); font-family: var(--font-mono); }
+.batch-history-heading { display: flex; justify-content: space-between; align-items: flex-start; color: var(--text-faint); margin-bottom: 12px; }
+.batch-history-heading .section-note { margin: 3px 0 0; font-size: .78rem; }
+.batch-timeline { border-left: 1px solid var(--border); margin-left: 7px; padding-left: 22px; }
+.batch-timeline-item { position: relative; padding-bottom: 16px; }
+.batch-timeline-item:last-child { padding-bottom: 0; }
+.batch-timeline-dot { position: absolute; width: 9px; height: 9px; border: 2px solid var(--text); background: var(--bg); border-radius: 50%; left: -27px; top: 4px; }
+.batch-timeline-content { border: 1px solid var(--border-soft); background: var(--surface-raised); border-radius: var(--radius-sm); padding: 10px 12px; }
+.batch-timeline-top { display: flex; justify-content: space-between; gap: 15px; font-size: .82rem; }
+.batch-timeline-top .mono { color: var(--text-faint); font-size: .7rem; }
+.batch-timeline-reason { color: var(--text-muted); font-size: .78rem; margin-top: 2px; }
+.form-error { margin-top: 14px; padding: 9px 11px; border: 1px solid var(--border); background: var(--surface-raised); color: var(--text); font-size: .8rem; }
+.btn:disabled { opacity: .4; cursor: not-allowed; }
+
+@media (max-width: 760px) {
+  .batch-toolbar-heading, .batch-detail-hero { flex-direction: column; align-items: flex-start; }
+  .batch-detail-actions { justify-content: flex-start; }
+  .batch-toolbar .search-input { min-width: 100%; }
 }

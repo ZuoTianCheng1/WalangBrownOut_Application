@@ -20,7 +20,7 @@ export default function Navbar() {
       <div className="navbar-inner">
         <NavLink to="/" className="navbar-brand">
           <span className="dot" />
-          WalangBrownout IMS
+          WalangBrownout
           <span className="brand-sub">Inventory system</span>
         </NavLink>
         <div className="navbar-links">

@@ -30,8 +30,7 @@ export default function AlertsCenter() {
       <p className="kicker">Alert center</p>
       <h1 className="page-title">Reorder and expiry alerts</h1>
       <p className="page-lede">
-        Everything here is generated automatically — reorder-point breaches from stock on hand,
-        expiry alerts from open batches. Nothing needs to be typed in by hand.
+       
       </p>
 
       <section className="section">

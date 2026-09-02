@@ -20,9 +20,9 @@ export default function Batches() {
   return (
     <div className="container-wide">
       <p className="kicker">Batches</p>
-      <h1 className="page-title">Every open lot, oldest expiry first</h1>
+      <h1 className="page-title">Every open lot, oldest expiry first.</h1>
       <p className="page-lede">
-        FEFO order — picking and allocation should always work through this list top to bottom.
+        
       </p>
 
       <section className="section">
