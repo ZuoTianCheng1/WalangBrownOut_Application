@@ -1,5 +1,7 @@
 import { NavLink } from 'react-router-dom';
+import { LogOut } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 const LINKS = [
   { to: '/', label: 'Dashboard', end: true },
@@ -10,6 +12,7 @@ const LINKS = [
 
 export default function Navbar() {
   const { alerts } = useInventory();
+  const { logout } = useAuth();
   const openAlerts = alerts ? alerts.filter((a) => !a.resolved).length : null;
 
   return (
@@ -32,6 +35,10 @@ export default function Navbar() {
               {link.badge && !!openAlerts && <span className="nav-badge">{openAlerts}</span>}
             </NavLink>
           ))}
+          <button type="button" className="nav-logout" onClick={logout} title="Sign out">
+            <LogOut size={15} />
+            <span>Sign out</span>
+          </button>
         </div>
       </div>
     </nav>

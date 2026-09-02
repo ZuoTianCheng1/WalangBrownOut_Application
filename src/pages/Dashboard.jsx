@@ -1,5 +1,18 @@
 import { Link } from 'react-router-dom';
 import { AlertTriangle, AlertOctagon, Info, ArrowRight } from 'lucide-react';
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts';
 import { useInventory } from '../context/InventoryContext.jsx';
 import { StockBadge } from '../components/Badges.jsx';
 
@@ -17,6 +30,18 @@ export default function Dashboard() {
   const nearExpiry = loading ? [] : batches.filter((b) => b.status === 'near_expiry' || b.status === 'expired');
   const openAlerts = loading ? [] : alerts.filter((a) => !a.resolved).slice(0, 4);
   const inventoryValue = loading ? 0 : items.reduce((sum, i) => sum + i.qty_on_hand * i.unit_price, 0);
+
+  const categoryData = loading ? [] : Object.entries(
+    items.reduce((acc, item) => {
+      acc[item.category] = (acc[item.category] || 0) + item.qty_on_hand;
+      return acc;
+    }, {})
+  ).map(([category, quantity]) => ({ category, quantity }));
+
+  const statusData = loading ? [] : [
+    { name: 'Healthy', value: items.filter((i) => i.stock_status === 'healthy').length },
+    { name: 'Needs action', value: items.filter((i) => i.stock_status !== 'healthy').length },
+  ].filter((row) => row.value > 0);
 
   return (
     <div className="container-wide">
@@ -55,6 +80,50 @@ export default function Dashboard() {
           </div>
         )}
       </section>
+
+      {!loading && (
+        <section className="section dashboard-charts">
+          <div className="page-header-row chart-section-header">
+            <div>
+              <h2 className="section-heading" style={{ marginTop: 0 }}>Inventory visualization</h2>
+              <p className="section-note">Quick views of current quantity by category and stock health.</p>
+            </div>
+          </div>
+          <div className="two-col">
+            <div className="card chart-card">
+              <h3 className="chart-title">Quantity by category</h3>
+              <div className="chart-wrap">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={categoryData} margin={{ top: 8, right: 8, left: -18, bottom: 8 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
+                    <XAxis dataKey="category" stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
+                    <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} allowDecimals={false} />
+                    <Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+                    <Bar dataKey="quantity" name="On hand" fill="var(--chart-fill)" radius={[3, 3, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="card chart-card">
+              <h3 className="chart-title">Stock health</h3>
+              <div className="chart-wrap">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={88} paddingAngle={2}>
+                      {statusData.map((entry, index) => (
+                        <Cell key={entry.name} fill={index === 0 ? 'var(--chart-fill)' : 'var(--chart-muted)'} />
+                      ))}
+                    </Pie>
+                    <Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', color: 'var(--text)' }} />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
 
       <div className="two-col" style={{ marginTop: 48, alignItems: 'start' }}>
         <section>
