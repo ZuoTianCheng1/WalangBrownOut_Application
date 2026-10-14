@@ -9,7 +9,7 @@ import Database from 'better-sqlite3';
 import fs from 'node:fs';
 import path from 'node:path';
 
-const app=express();
+const app=express(); app.set("trust proxy",1);
 const port=Number(process.env.PORT||4000);
 if(!process.env.JWT_SECRET || process.env.JWT_SECRET.length<32) { console.error('JWT_SECRET must be set to a random secret of at least 32 characters.'); process.exit(1); }
 const dbPath=path.resolve(process.env.DATABASE_PATH||'./data/inventory.sqlite'); fs.mkdirSync(path.dirname(dbPath),{recursive:true});

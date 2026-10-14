@@ -1394,3 +1394,49 @@ body {
 [data-theme="light"] .alert-item.tier-warning .alert-icon,
 [data-theme="light"] .alert-item.tier-info .alert-icon { color: var(--text); }
 [data-theme="light"] .batch-progress span { background: var(--text); }
+
+/* Theme toggle lives on the page (top-left), not in the navbar */
+.page-main { position: relative; }
+.page-theme-toggle { position: absolute; top: calc(var(--nav-height) + 8px); left: 28px; z-index: 5; }
+
+/* Navbar overflow menu (Settings + Sign out) */
+.nav-menu { position:relative; }
+.nav-menu-panel { position:absolute; right:0; top:39px; min-width:160px; z-index:300; background:var(--surface); border:1px solid var(--border); border-radius:6px; box-shadow:0 12px 30px rgba(0,0,0,.35); padding:4px; display:flex; flex-direction:column; }
+.nav-menu-panel button { display:flex; align-items:center; gap:10px; width:100%; padding:9px 12px; background:transparent; border:0; border-radius:4px; color:var(--text); font:inherit; font-size:.85rem; text-align:left; cursor:pointer; }
+.nav-menu-panel button:hover { background:var(--surface-raised); }
+
+/* Search: wider box + suggestion list */
+.global-search { flex: 1 1 auto; }
+.global-search input { width: 260px; }
+.search-results { width: min(460px, 92vw); padding: 4px; }
+.search-results button { flex-direction: row; align-items: center; gap: 10px; border-radius: 4px; }
+.search-results button.active, .search-results button:hover { background: var(--surface-raised); }
+.search-results .sr-type { flex: 0 0 auto; min-width: 48px; text-align: center; font-size: .66rem; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); border: 1px solid var(--border); border-radius: 4px; padding: 2px 6px; }
+.search-results .sr-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; text-align: left; }
+.search-results .sr-text strong, .search-results .sr-text small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-results mark { background: transparent; color: var(--amber); font-weight: 700; }
+@media (max-width: 1280px) { .global-search input { width: 170px; } }
+@media (max-width: 1120px) { .global-search input { width: 130px; } }
+
+/* Search sizing fix: keep nav links and the ⋯ menu fully visible */
+.global-search { flex: 0 1 auto; min-width: 0; }
+.global-search input { width: 170px; }
+.nav-link, .nav-menu { flex-shrink: 0; }
+@media (max-width: 1500px) { .nav-user { display: none; } }
+@media (max-width: 1280px) { .global-search input { width: 130px; } }
+@media (max-width: 1120px) { .global-search input { width: 110px; } }
+
+/* Final navbar sizing: compact search, user label visible on normal desktop widths */
+.global-search input { width: 120px; }
+@media (max-width: 1500px) { .nav-user { display: inline; } }
+@media (max-width: 1240px) { .nav-user { display: none; } .global-search input { width: 100px; } }
+
+/* Navbar sizing, final: search grows into free space (max 230px), shrinks first; user label stays */
+.nav-tools { flex: 1 1 auto; justify-content: flex-end; min-width: 0; }
+.global-search { flex: 0 1 230px; min-width: 110px; }
+.global-search input { width: 100%; flex: 1 1 auto; min-width: 0; }
+.nav-user { flex: 0 0 auto; }
+@media (min-width: 900px) { .nav-user { display: inline; } }
+
+/* Search: use the free space in the navbar (up to 360px), still shrinks first when tight */
+.global-search { flex: 0 1 360px; min-width: 120px; }

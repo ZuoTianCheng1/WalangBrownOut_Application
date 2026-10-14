@@ -1,0 +1,18 @@
+# Render Blueprint: hosts the Laravel API (Docker, SQLite) so the Vercel frontend has a backend.
+services:
+  - type: web
+    name: walangbrownout-api
+    runtime: docker
+    plan: free
+    rootDir: laravel-backend
+    dockerfilePath: ./Dockerfile.render
+    healthCheckPath: /api/auth/me
+    envVars:
+      - key: APP_KEY
+        sync: false
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
