@@ -12,14 +12,11 @@ export default function Login() {
 
   if (isAuthenticated) return <Navigate to="/" replace />;
 
-  const submit = (e) => {
-    e.preventDefault();
-    const result = login(username.trim(), password);
-    if (result.ok) {
-      navigate('/', { replace: true });
-    } else {
-      setError(result.error);
-    }
+  const [submitting, setSubmitting] = useState(false);
+  const submit = async (e) => {
+    e.preventDefault(); setSubmitting(true); setError('');
+    const result = await login(username.trim(), password); setSubmitting(false);
+    if (result.ok) navigate('/', { replace: true }); else setError(result.error);
   };
 
   return (
@@ -56,13 +53,13 @@ export default function Login() {
             />
           </div>
           {error && <div className="login-error" role="alert">{error}</div>}
-          <button className="btn btn-primary login-submit" type="submit">
-            <LogIn size={16} /> Sign in
+          <button className="btn btn-primary login-submit" type="submit" disabled={submitting}>
+            <LogIn size={16} /> {submitting ? 'Signing in…' : 'Sign in'}
           </button>
         </form>
 
         <div className="login-hint">
-          Demo access: <span className="mono">admin</span> / <span className="mono">admin123</span>
+          Use the account credentials configured by your system administrator.
         </div>
       </div>
     </div>

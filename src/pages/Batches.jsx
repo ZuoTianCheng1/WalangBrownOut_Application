@@ -3,9 +3,11 @@ import { PackageMinus } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext.jsx';
 import { BatchBadge } from '../components/Badges.jsx';
 import Modal from '../components/Modal.jsx';
+import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Batches() {
   const { items, batches, consumeBatch } = useInventory();
+  const { can } = useAuth();
   const [statusFilter, setStatusFilter] = useState('All');
   const [sku, setSku] = useState('All');
   const [selectedLotId, setSelectedLotId] = useState(null);
@@ -80,13 +82,13 @@ export default function Batches() {
                       <td className="mono">{b.qty_remaining}</td>
                       <td><BatchBadge status={b.status} /></td>
                       <td>
-                        <button
+                        {can('adjustStock') && <button
                           type="button"
                           className="btn btn-ghost btn-sm"
                           onClick={(e) => { e.stopPropagation(); setSelectedLotId(b.lot_id); }}
                         >
                           <PackageMinus size={14} /> Use
-                        </button>
+                        </button>}
                       </td>
                     </tr>
                   ))
@@ -102,18 +104,19 @@ export default function Batches() {
         itemName={selected ? nameFor(selected.sku_id) : ''}
         onClose={() => setSelectedLotId(null)}
         consumeBatch={consumeBatch}
+        canAdjust={can('adjustStock')}
       />
     </div>
   );
 }
 
-function BatchDetailModal({ batch, itemName, onClose, consumeBatch }) {
+function BatchDetailModal({ batch, itemName, onClose, consumeBatch, canAdjust }) {
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('Sale');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
-  const canUse = !!batch && batch.status !== 'expired' && batch.qty_remaining > 0;
+  const canUse = canAdjust && !!batch && batch.status !== 'expired' && batch.qty_remaining > 0;
 
   const handleUse = async (e) => {
     e.preventDefault();
@@ -223,11 +226,12 @@ function BatchDetailModal({ batch, itemName, onClose, consumeBatch }) {
                   <th>Type</th>
                   <th>Quantity</th>
                   <th>Reason</th>
+                  <th>Recorded by</th>
                 </tr>
               </thead>
               <tbody>
                 {!batch.history || batch.history.length === 0 ? (
-                  <tr><td colSpan={4} className="table-empty">No movements recorded.</td></tr>
+                  <tr><td colSpan={5} className="table-empty">No movements recorded.</td></tr>
                 ) : (
                   batch.history.map((h) => (
                     <tr key={h.id}>
@@ -235,6 +239,7 @@ function BatchDetailModal({ batch, itemName, onClose, consumeBatch }) {
                       <td>{h.type === 'received' ? 'Received' : 'Used'}</td>
                       <td className="mono">{h.type === 'used' ? '-' : '+'}{h.quantity}</td>
                       <td>{h.reason}</td>
+                      <td>{h.actor || 'System / seeded data'}</td>
                     </tr>
                   ))
                 )}

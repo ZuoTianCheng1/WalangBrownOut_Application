@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
-import { Search, Plus } from 'lucide-react';
+import { Search, Plus, Printer } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext.jsx';
 import { StockBadge, ClassBadge, BatchBadge } from '../components/Badges.jsx';
 import Modal from '../components/Modal.jsx';
 import { categories } from '../data/mockData.js';
+import { useAuth } from '../context/AuthContext.jsx';
 
 function peso(n) {
   return `₱${n.toLocaleString('en-PH')}`;
@@ -11,6 +12,10 @@ function peso(n) {
 
 export default function Inventory() {
   const { items, batches, addItem } = useInventory();
+  const { can } = useAuth();
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({ key: 'name', dir: 'asc' });
+  const pageSize = 10;
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -29,6 +34,15 @@ export default function Inventory() {
     });
   }, [items, query, category, statusFilter]);
 
+  const sorted = [...filtered].sort((a,b) => {
+    const av=a[sort.key] ?? ''; const bv=b[sort.key] ?? '';
+    const cmp=typeof av==='number' && typeof bv==='number' ? av-bv : String(av).localeCompare(String(bv));
+    return sort.dir==='asc' ? cmp : -cmp;
+  });
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageItems = sorted.slice((page - 1) * pageSize, page * pageSize);
+  const sortBy = key => { setSort(old=>({key,dir:old.key===key&&old.dir==='asc'?'desc':'asc'})); setPage(1); };
+
   const selectedBatches = useMemo(() => {
     if (!selected || !batches) return [];
     return batches
@@ -43,9 +57,9 @@ export default function Inventory() {
           <p className="kicker">Inventory</p>
           <h1 className="page-title">All items.</h1>
         </div>
-        <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
+        {can('addItem') && <button className="btn btn-primary" onClick={() => setAddOpen(true)}>
           <Plus size={16} /> Add item
-        </button>
+        </button>}
       </div>
       <p className="page-lede">Search, filter, and open an item to see its batches.</p>
 
@@ -56,16 +70,19 @@ export default function Inventory() {
             <input
               placeholder="Search by name or SKU…"
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={(e) => {setQuery(e.target.value);setPage(1);}}
             />
           </div>
-          <select className="select-input" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <button className="btn btn-ghost btn-sm" onClick={() => localStorage.setItem('ims_saved_inventory_filter', JSON.stringify({category,statusFilter,query}))}>Save filter</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { try { const f=JSON.parse(localStorage.getItem('ims_saved_inventory_filter')||'{}'); setCategory(f.category||'All'); setStatusFilter(f.statusFilter||'All'); setQuery(f.query||''); setPage(1); } catch {} }}>Load saved</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => { const labels=filtered.map(i=>`<article><strong>${i.name}</strong><div>${i.sku_id}</div><small>WalangBrownout IMS · SKU label</small></article>`).join(''); const w=window.open('', '_blank'); if(w){w.document.write(`<html><head><title>SKU labels</title><style>body{font:14px Arial;display:grid;grid-template-columns:repeat(3,1fr);gap:12px}article{border:1px dashed #555;padding:14px;break-inside:avoid}strong{display:block;margin-bottom:8px}</style></head><body>${labels}</body></html>`);w.document.close();w.print();} }}><Printer size={14}/> Print SKU labels</button>
+          <select className="select-input" value={category} onChange={(e) => {setCategory(e.target.value);setPage(1);}}>
             <option value="All">All categories</option>
             {categories.map((c) => (
               <option key={c} value={c}>{c}</option>
             ))}
           </select>
-          <select className="select-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <select className="select-input" value={statusFilter} onChange={(e) => {setStatusFilter(e.target.value);setPage(1);}}>
             <option value="All">All statuses</option>
             <option value="healthy">Healthy</option>
             <option value="below_reorder">Below reorder point</option>
@@ -80,13 +97,13 @@ export default function Inventory() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>SKU</th>
-                  <th>Name</th>
-                  <th>Category</th>
-                  <th>Class</th>
-                  <th>On hand</th>
-                  <th>Unit price</th>
-                  <th>Status</th>
+                  <th onClick={() => sortBy('sku_id')} className="sortable">SKU ↕</th>
+                  <th onClick={() => sortBy('name')} className="sortable">Name ↕</th>
+                  <th onClick={() => sortBy('category')} className="sortable">Category ↕</th>
+                  <th onClick={() => sortBy('abc_class')} className="sortable">Class ↕</th>
+                  <th onClick={() => sortBy('qty_on_hand')} className="sortable">On hand ↕</th>
+                  <th onClick={() => sortBy('unit_price')} className="sortable">Unit price ↕</th>
+                  <th onClick={() => sortBy('stock_status')} className="sortable">Status ↕</th>
                 </tr>
               </thead>
               <tbody>
@@ -95,7 +112,7 @@ export default function Inventory() {
                     <td colSpan={7} className="table-empty">No items match those filters.</td>
                   </tr>
                 ) : (
-                  filtered.map((i) => (
+                  pageItems.map((i) => (
                     <tr key={i.sku_id} className="clickable" onClick={() => setSelected(i)}>
                       <td className="mono">{i.sku_id}</td>
                       <td>{i.name}</td>
@@ -111,6 +128,7 @@ export default function Inventory() {
             </table>
           </div>
         )}
+        {!!items && <div className="pagination"><span>{filtered.length} items · page {Math.min(page,pageCount)} of {pageCount}</span><div><button className="btn btn-ghost btn-sm" disabled={page<=1} onClick={()=>setPage(p=>p-1)}>Previous</button><button className="btn btn-ghost btn-sm" disabled={page>=pageCount} onClick={()=>setPage(p=>p+1)}>Next</button></div></div>}
       </section>
 
       <Modal open={!!selected} onClose={() => setSelected(null)} title={selected?.name ?? ''} wide>
@@ -120,6 +138,10 @@ export default function Inventory() {
               <div className="detail-field">
                 <div className="k">SKU</div>
                 <div className="v mono">{selected.sku_id}</div>
+              </div>
+              <div className="detail-field">
+                <div className="k">Created by</div>
+                <div className="v">{selected.created_by || 'System / seeded data'}</div>
               </div>
               <div className="detail-field">
                 <div className="k">Category</div>

@@ -10,6 +10,8 @@ import {
   Tooltip,
   PieChart,
   Pie,
+  LineChart,
+  Line,
   Cell,
   Legend,
 } from 'recharts';
@@ -37,6 +39,18 @@ export default function Dashboard() {
       return acc;
     }, {})
   ).map(([category, quantity]) => ({ category, quantity }));
+
+  const valueByCategory = loading ? [] : Object.values(items.reduce((acc, item) => {
+    acc[item.category] ??= { category: item.category, value: 0 };
+    acc[item.category].value += item.qty_on_hand * item.unit_price;
+    return acc;
+  }, {}));
+  const abcData = loading ? [] : ['A','B','C'].map((abc) => ({ name: `Class ${abc}`, value: items.filter(i=>i.abc_class===abc).reduce((sum,i)=>sum+i.qty_on_hand*i.unit_price,0) }));
+  const expiryTimeline = loading ? [] : (() => {
+    const groups = {};
+    batches.filter(b=>b.expiry_date && Number(b.qty_remaining ?? b.qty_received ?? 0)>0).forEach(b => { const month=b.expiry_date.slice(0,7); groups[month]=(groups[month]||0)+1; });
+    return Object.entries(groups).sort(([a],[b])=>a.localeCompare(b)).map(([month,count])=>({month,batches:count}));
+  })();
 
   const statusData = loading ? [] : [
     { name: 'Healthy', value: items.filter((i) => i.stock_status === 'healthy').length },
@@ -86,33 +100,33 @@ export default function Dashboard() {
           <div className="page-header-row chart-section-header">
             <div>
               <h2 className="section-heading" style={{ marginTop: 0 }}>Inventory Chart</h2>
-              <p className="section-note">Quick views of current quantity by category and stock health.</p>
+              <p className="section-note">Inventory valuation, ABC class allocation, and upcoming batch expiry.</p>
             </div>
           </div>
           <div className="two-col">
             <div className="card chart-card">
-              <h3 className="chart-title">Quantity by category</h3>
+              <h3 className="chart-title">Stock value by category</h3>
               <div className="chart-wrap">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={categoryData} margin={{ top: 8, right: 8, left: -18, bottom: 8 }}>
+                  <BarChart data={valueByCategory} margin={{ top: 8, right: 8, left: -18, bottom: 8 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
                     <XAxis dataKey="category" stroke="var(--text-muted)" tick={{ fontSize: 11 }} />
                     <YAxis stroke="var(--text-muted)" tick={{ fontSize: 11 }} allowDecimals={false} />
                     <Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', color: 'var(--text)' }} />
-                    <Bar dataKey="quantity" name="On hand" fill="var(--chart-fill)" radius={[3, 3, 0, 0]} />
+                    <Bar dataKey="value" name="Stock value (PHP)" fill="var(--chart-fill)" radius={[3, 3, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
             <div className="card chart-card">
-              <h3 className="chart-title">Stock health</h3>
+              <h3 className="chart-title">ABC class breakdown · value</h3>
               <div className="chart-wrap">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
-                    <Pie data={statusData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={88} paddingAngle={2}>
-                      {statusData.map((entry, index) => (
-                        <Cell key={entry.name} fill={index === 0 ? 'var(--chart-fill)' : 'var(--chart-muted)'} />
+                    <Pie data={abcData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={88} paddingAngle={2}>
+                      {abcData.map((entry, index) => (
+                        <Cell key={entry.name} fill={['var(--chart-fill)','#3eb489','#d64550'][index]} />
                       ))}
                     </Pie>
                     <Tooltip contentStyle={{ background: 'var(--surface-raised)', border: '1px solid var(--border)', color: 'var(--text)' }} />
@@ -121,6 +135,11 @@ export default function Dashboard() {
                 </ResponsiveContainer>
               </div>
             </div>
+          </div>
+          <div className="card chart-card expiry-timeline-card" style={{ marginTop: 16 }}>
+            <h3 className="chart-title">Expiry outlook over time</h3>
+            <p className="section-note">Batches grouped by expiry month; past dates are shown separately.</p>
+            <div className="chart-wrap"><ResponsiveContainer width="100%" height="100%"><LineChart data={expiryTimeline}><CartesianGrid strokeDasharray="3 3" stroke="var(--border)" /><XAxis dataKey="month" stroke="var(--text-muted)" tick={{fontSize:11}}/><YAxis stroke="var(--text-muted)" allowDecimals={false}/><Tooltip/><Line type="monotone" dataKey="batches" name="Expiring batches" stroke="var(--chart-fill)" strokeWidth={2} /></LineChart></ResponsiveContainer></div>
           </div>
         </section>
       )}

@@ -23,8 +23,8 @@ import {
   dashboardSummary,
 } from '../data/mockData.js';
 
-const USE_MOCK = true;
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:4000/api';
+const USE_MOCK = false;
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
 
 // In-memory store standing in for a database — lets the mock API
 // support create/update calls that persist for the session.
@@ -39,12 +39,40 @@ function delay(data, ms = 200) {
   return new Promise((resolve) => setTimeout(() => resolve(data), ms));
 }
 
+// --- Laravel response adapters: reshape API data into what the pages expect ---
+function normalizeHistory(h) {
+  const qty = Number(h.quantity);
+  const isIn = h.type === 'received' || (h.type === 'adjustment' && qty > 0);
+  return {
+    id: h.id,
+    type: isIn ? 'received' : 'used',
+    quantity: Math.abs(qty),
+    reason: h.reason,
+    actor: h.actor || null,
+    date: String(h.date || h.created_at || '').slice(0, 10),
+  };
+}
+function normalizeBatch(b) { return { ...b, history: (b.history || []).map(normalizeHistory) }; }
+function normalizeAlert(a) {
+  const m = a.meta;
+  const meta = m == null ? '' : typeof m === 'string' ? m : Array.isArray(m) ? m.join(' · ') : Object.values(m).join(' · ');
+  return { ...a, meta, resolved: !!a.resolved };
+}
+
 async function request(path, options) {
+  const token = localStorage.getItem('walangbrownout_ims_token');
   const res = await fetch(`${API_BASE_URL}${path}`, {
-    headers: { 'Content-Type': 'application/json' },
     ...options,
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(options?.headers || {}) },
   });
-  if (!res.ok) throw new Error(`API error ${res.status} on ${path}`);
+  if (!res.ok) {
+    // Expired or revoked session: let AuthContext sign the user out (not for failed logins).
+    if (res.status === 401 && !path.startsWith('/auth/login')) window.dispatchEvent(new Event('ims:unauthorized'));
+    const body = await res.json().catch(() => ({}));
+    // Laravel returns { message } or { message, errors: { field: [..] } }; the old API returned { error }.
+    const firstFieldError = body.errors ? Object.values(body.errors)[0]?.[0] : null;
+    throw new Error(body.error || firstFieldError || body.message || `API error ${res.status} on ${path}`);
+  }
   return res.json();
 }
 
@@ -66,7 +94,8 @@ export async function createItem(item) {
     _items = [record, ..._items];
     return delay(record, 300);
   }
-  return request('/items', { method: 'POST', body: JSON.stringify(item) });
+  const created = await request('/items', { method: 'POST', body: JSON.stringify(item) });
+  return { ...created, created_by: item.created_by ?? created.created_by };
 }
 
 /** GET /batches?sku_id=optional
@@ -77,7 +106,7 @@ export async function getBatches(skuId) {
     const rows = skuId ? _batches.filter((b) => b.sku_id === skuId) : [..._batches];
     return delay(rows.map((b) => ({ ...b, history: _batchHistory.get(b.lot_id) ?? [] })));
   }
-  return request(`/batches${skuId ? `?sku_id=${encodeURIComponent(skuId)}` : ''}`);
+  return (await request(`/batches${skuId ? `?sku_id=${encodeURIComponent(skuId)}` : ''}`)).map(normalizeBatch);
 }
 
 
@@ -85,11 +114,11 @@ export async function getBatches(skuId) {
  * body: { quantity, reason }
  * -> { batch, history }
  */
-export async function consumeBatch(lotId, quantity, reason = 'Sale') {
+export async function consumeBatch(lotId, quantity, reason = 'Sale', actor = 'System') {
   if (USE_MOCK) {
     const batch = _batches.find((b) => b.lot_id === lotId);
     if (!batch) throw new Error('Batch not found.');
-    if (batch.status === 'expired') throw new Error('Expired batches cannot be used.');
+    if (batch.status === 'expired' || (batch.expiry_date && new Date(`${batch.expiry_date}T23:59:59`) < new Date())) throw new Error('Expired batches cannot be used.');
     if (!Number.isInteger(quantity) || quantity <= 0) throw new Error('Quantity must be a positive whole number.');
     if (quantity > batch.qty_remaining) throw new Error(`Only ${batch.qty_remaining} units are available in this batch.`);
 
@@ -101,13 +130,18 @@ export async function consumeBatch(lotId, quantity, reason = 'Sale') {
       type: 'used',
       quantity,
       reason,
+      actor,
       date: new Date().toISOString().slice(0, 10),
     });
     _batchHistory.set(lotId, history);
     updated.history = history;
     return delay({ batch: updated, history }, 250);
   }
-  return request(`/batches/${encodeURIComponent(lotId)}/use`, { method: 'PATCH', body: JSON.stringify({ quantity, reason }) });
+  // Laravel has no PATCH /batches/:lot/use. A lot-specific deduction is POST /stock/adjust with a negative delta.
+  const why = String(reason || '').trim();
+  await request('/stock/adjust', { method: 'POST', body: JSON.stringify({ lot_id: lotId, quantity_delta: -Math.abs(quantity), reason: why.length >= 3 ? why : 'Stock use' }) });
+  const batch = (await getBatches()).find((b) => b.lot_id === lotId);
+  return { batch, history: batch?.history ?? [] };
 }
 
 /** GET /alerts?status=all
@@ -115,17 +149,20 @@ export async function consumeBatch(lotId, quantity, reason = 'Sale') {
  *        title, meta, resolved }] */
 export async function getAlerts() {
   if (USE_MOCK) return delay([..._alerts], 250);
-  return request('/alerts');
+  return (await request('/alerts')).map(normalizeAlert);
 }
 
 /** PATCH /alerts/:id  body: { resolved: true }
  *  -> the updated alert record */
-export async function resolveAlert(id) {
+export async function resolveAlert(id, notes = '', actor = 'System') {
   if (USE_MOCK) {
-    _alerts = _alerts.map((a) => (a.id === id ? { ...a, resolved: true } : a));
+    _alerts = _alerts.map((a) => (a.id === id ? { ...a, resolved: true, resolved_by: actor, resolved_at: new Date().toISOString(), resolution_notes: notes } : a));
     return delay(_alerts.find((a) => a.id === id), 150);
   }
-  return request(`/alerts/${id}`, { method: 'PATCH', body: JSON.stringify({ resolved: true }) });
+  // Laravel requires resolution_notes (min 3 chars) even though the UI says the note is optional.
+  const note = String(notes || '').trim();
+  const updated = await request(`/alerts/${id}`, { method: 'PATCH', body: JSON.stringify({ resolved: true, resolution_notes: note.length >= 3 ? note : 'Resolved' }) });
+  return normalizeAlert(updated);
 }
 
 /** GET /dashboard/summary
@@ -135,4 +172,12 @@ export async function getDashboardSummary() {
   return request('/dashboard/summary');
 }
 
-export const apiMode = () => (USE_MOCK ? 'mock' : 'live');
+export const apiMode = () => 'live';
+
+export async function loginApi(username, password) { return request('/auth/login', { method: 'POST', body: JSON.stringify({ username, password }) }); }
+export async function meApi() { return request('/auth/me'); }
+
+// --- User management (Admin only; enforced by the API) ---
+export async function getUsers() { return request('/users'); }
+export async function createUser(user) { return request('/users', { method: 'POST', body: JSON.stringify(user) }); }
+export async function updateUser(id, patch) { return request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }); }

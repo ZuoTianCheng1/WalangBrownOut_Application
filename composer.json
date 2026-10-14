@@ -1,0 +1,15 @@
+{
+    "name": "bryan/walangbrownout-ims",
+    "autoload": {
+        "psr-4": {
+            "Bryan\\WalangbrownoutIms\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "ZuoTianCheng1",
+            "email": "yancyp23@gmail.com"
+        }
+    ],
+    "require": {}
+}

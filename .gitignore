@@ -2,3 +2,11 @@ node_modules
 dist
 .env
 .DS_Store
+/vendor
+/node_modules
+.env
+/storage/*.key
+
+vendor/
+node_modules/
+dist/
