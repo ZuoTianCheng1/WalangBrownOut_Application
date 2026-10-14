@@ -24,7 +24,9 @@ import {
 } from '../data/mockData.js';
 
 const USE_MOCK = false;
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000/api';
+// VITE_API_BASE_URL wins; otherwise production builds use the hosted API and dev uses the local one.
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
+  || (import.meta.env.PROD ? 'https://walangbrownout-api.onrender.com/api' : 'http://localhost:8000/api');
 
 // In-memory store standing in for a database — lets the mock API
 // support create/update calls that persist for the session.
