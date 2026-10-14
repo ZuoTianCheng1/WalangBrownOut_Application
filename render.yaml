@@ -1,24 +1,18 @@
-# Render Blueprint: hosts the Express API so the Vercel frontend has a backend.
-# Render dashboard -> New -> Blueprint -> pick this repo. Then set ADMIN_PASSWORD and CLIENT_ORIGIN.
+# Render Blueprint: hosts the Laravel API (Docker, SQLite) so the Vercel frontend has a backend.
 services:
   - type: web
     name: walangbrownout-api
-    runtime: node
+    runtime: docker
     plan: free
-    rootDir: backend
-    buildCommand: npm install
-    startCommand: node server.js
-    healthCheckPath: /api/health
+    rootDir: laravel-backend
+    dockerfilePath: ./Dockerfile.render
+    healthCheckPath: /api/auth/me
     envVars:
-      - key: NODE_VERSION
-        value: 22
-      - key: JWT_SECRET
-        generateValue: true
+      - key: APP_KEY
+        sync: false
       - key: ADMIN_USERNAME
         value: admin
       - key: ADMIN_PASSWORD
         sync: false
-      - key: CLIENT_ORIGIN
+      - key: FRONTEND_URL
         sync: false
-      - key: DATABASE_PATH
-        value: ./data/inventory.sqlite

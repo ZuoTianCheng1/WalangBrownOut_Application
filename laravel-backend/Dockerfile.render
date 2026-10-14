@@ -1,0 +1,16 @@
+# Production image for Render (free web service). SQLite file DB, resets on restart/redeploy.
+FROM php:8.4-cli
+RUN apt-get update && apt-get install -y --no-install-recommends git unzip libzip-dev \
+ && docker-php-ext-install pdo_mysql zip opcache && rm -rf /var/lib/apt/lists/*
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+RUN { echo 'opcache.enable=1'; echo 'opcache.memory_consumption=128'; echo 'opcache.validate_timestamps=0'; \
+ echo 'realpath_cache_size=4096K'; echo 'realpath_cache_ttl=600'; } > /usr/local/etc/php/conf.d/zz-opcache.ini
+WORKDIR /app
+COPY composer.json composer.lock ./
+RUN composer install --no-dev --no-interaction --no-scripts --prefer-dist
+COPY . .
+RUN composer dump-autoload --optimize --no-dev --no-interaction \
+ && mkdir -p storage/framework/cache/data storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
+ENV APP_ENV=production APP_DEBUG=false DB_CONNECTION=sqlite DB_DATABASE=/app/storage/database.sqlite \
+    CACHE_STORE=file PHP_CLI_SERVER_WORKERS=4
+CMD ["sh", "-c", "touch \"$DB_DATABASE\" && php artisan migrate --force && php artisan db:seed --force && (php artisan db:seed --class=DemoDataSeeder --force || true) && exec php artisan serve --host=0.0.0.0 --port=${PORT:-8000}"]
