@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+import { Sun, Moon } from 'lucide-react';
 import { InventoryProvider } from './context/InventoryContext.jsx';
 import Navbar from './components/Navbar.jsx';
 import Footer from './components/Footer.jsx';
@@ -21,6 +22,16 @@ function PermissionRoute({ permission, children }) {
   return can(permission) ? children : <Navigate to="/" replace />;
 }
 
+function ThemeToggle() {
+  const { settings, updateSettings } = useSettings();
+  const dark = settings.theme === 'dark';
+  return (
+    <button type="button" className="nav-icon-btn page-theme-toggle" title="Toggle theme" aria-label="Toggle theme" onClick={() => updateSettings({ theme: dark ? 'light' : 'dark' })}>
+      {dark ? <Sun size={16} /> : <Moon size={16} />}
+    </button>
+  );
+}
+
 function ProtectedApp() {
   const { isAuthenticated } = useAuth();
 
@@ -31,6 +42,7 @@ function ProtectedApp() {
       <div className="page-shell">
         <Navbar />
         <main className="page-main">
+          <ThemeToggle />
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/inventory" element={<Inventory />} />
