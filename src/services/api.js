@@ -146,6 +146,14 @@ export async function consumeBatch(lotId, quantity, reason = 'Sale', actor = 'Sy
   return { batch, history: batch?.history ?? [] };
 }
 
+/** PATCH /batches/:lot_id  body: { received_date, expiry_date, qty_received, qty_remaining } -> { batch, history } */
+export async function updateBatch(lotId, payload) {
+  if (USE_MOCK) throw new Error('Editing a batch needs the live API.');
+  await request(`/batches/${encodeURIComponent(lotId)}`, { method: 'PATCH', body: JSON.stringify(payload) });
+  const batch = (await getBatches()).find((b) => b.lot_id === lotId);
+  return { batch, history: batch?.history ?? [] };
+}
+
 /** GET /alerts?status=all
  *  -> [{ id, tier: 'critical'|'warning'|'info', kind, sku_id, lot_id,
  *        title, meta, resolved }] */

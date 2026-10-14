@@ -1,12 +1,12 @@
-import { useMemo, useState } from 'react';
-import { PackageMinus } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { PackageMinus, Pencil } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext.jsx';
 import { BatchBadge } from '../components/Badges.jsx';
 import Modal from '../components/Modal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Batches() {
-  const { items, batches, consumeBatch } = useInventory();
+  const { items, batches, consumeBatch, updateBatch } = useInventory();
   const { can } = useAuth();
   const [statusFilter, setStatusFilter] = useState('All');
   const [sku, setSku] = useState('All');
@@ -104,17 +104,52 @@ export default function Batches() {
         itemName={selected ? nameFor(selected.sku_id) : ''}
         onClose={() => setSelectedLotId(null)}
         consumeBatch={consumeBatch}
+        updateBatch={updateBatch}
         canAdjust={can('adjustStock')}
       />
     </div>
   );
 }
 
-function BatchDetailModal({ batch, itemName, onClose, consumeBatch, canAdjust }) {
+function BatchDetailModal({ batch, itemName, onClose, consumeBatch, updateBatch, canAdjust }) {
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('Sale');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [editing, setEditing] = useState(false);
+  const [form, setForm] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  useEffect(() => { setEditing(false); setEditError(''); }, [batch?.lot_id]);
+
+  const startEdit = () => {
+    setForm({ received_date: batch.received_date ?? '', expiry_date: batch.expiry_date ?? '', qty_received: String(batch.qty_received), qty_remaining: String(batch.qty_remaining) });
+    setEditError('');
+    setEditing(true);
+  };
+  const setField = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    const received = Number(form.qty_received);
+    const remaining = Number(form.qty_remaining);
+    setEditError('');
+    if (!form.received_date) return setEditError('Received date is required.');
+    if (form.expiry_date && form.expiry_date < form.received_date) return setEditError('Expiry date cannot be before the received date.');
+    if (!Number.isInteger(received) || received < 0) return setEditError('Received quantity must be a whole number, 0 or more.');
+    if (!Number.isInteger(remaining) || remaining < 0) return setEditError('Remaining must be a whole number, 0 or more.');
+    if (remaining > received) return setEditError('Remaining cannot be more than the received quantity.');
+    setSaving(true);
+    try {
+      await updateBatch(batch.lot_id, { received_date: form.received_date, expiry_date: form.expiry_date || null, qty_received: received, qty_remaining: remaining });
+      setEditing(false);
+    } catch (err) {
+      setEditError(err.message ?? 'Could not save changes.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   const canUse = canAdjust && !!batch && batch.status !== 'expired' && batch.qty_remaining > 0;
 
@@ -149,32 +184,75 @@ function BatchDetailModal({ batch, itemName, onClose, consumeBatch, canAdjust })
     <Modal open={!!batch} onClose={onClose} title={batch ? `${itemName} — ${batch.lot_id}` : ''} wide>
       {batch && (
         <>
-          <div className="detail-grid">
-            <div className="detail-field">
-              <div className="k">Lot</div>
-              <div className="v mono">{batch.lot_id}</div>
-            </div>
-            <div className="detail-field">
-              <div className="k">Received</div>
-              <div className="v mono">{batch.received_date}</div>
-            </div>
-            <div className="detail-field">
-              <div className="k">Expiry</div>
-              <div className="v mono">{batch.expiry_date ?? '—'}</div>
-            </div>
-            <div className="detail-field">
-              <div className="k">Received qty</div>
-              <div className="v mono">{batch.qty_received}</div>
-            </div>
-            <div className="detail-field">
-              <div className="k">Remaining</div>
-              <div className="v mono">{batch.qty_remaining}</div>
-            </div>
-            <div className="detail-field">
-              <div className="k">Status</div>
-              <div className="v"><BatchBadge status={batch.status} /></div>
-            </div>
-          </div>
+          {editing ? (
+            <form onSubmit={handleSave}>
+              <div className="form-grid">
+                <div className="form-field">
+                  <label>Lot</label>
+                  <input type="text" value={batch.lot_id} disabled />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="edit-received">Received</label>
+                  <input id="edit-received" type="date" value={form.received_date} onChange={setField('received_date')} required />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="edit-expiry">Expiry</label>
+                  <input id="edit-expiry" type="date" value={form.expiry_date} min={form.received_date || undefined} onChange={setField('expiry_date')} />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="edit-qty-received">Received qty</label>
+                  <input id="edit-qty-received" type="number" min="0" step="1" value={form.qty_received} onChange={setField('qty_received')} required />
+                </div>
+                <div className="form-field">
+                  <label htmlFor="edit-qty-remaining">Remaining</label>
+                  <input id="edit-qty-remaining" type="number" min="0" step="1" value={form.qty_remaining} onChange={setField('qty_remaining')} required />
+                </div>
+                <div className="form-field">
+                  <label>Status</label>
+                  <div style={{ paddingTop: 8 }}><BatchBadge status={batch.status} /> <small>(updates automatically)</small></div>
+                </div>
+              </div>
+              {editError && <div className="form-error" role="alert">{editError}</div>}
+              <div className="form-actions">
+                <button type="button" className="btn btn-ghost" onClick={() => setEditing(false)} disabled={saving}>Cancel</button>
+                <button type="submit" className="btn btn-primary" disabled={saving}>{saving ? 'Saving…' : 'Save changes'}</button>
+              </div>
+            </form>
+          ) : (
+            <>
+              <div className="detail-grid">
+                <div className="detail-field">
+                  <div className="k">Lot</div>
+                  <div className="v mono">{batch.lot_id}</div>
+                </div>
+                <div className="detail-field">
+                  <div className="k">Received</div>
+                  <div className="v mono">{batch.received_date}</div>
+                </div>
+                <div className="detail-field">
+                  <div className="k">Expiry</div>
+                  <div className="v mono">{batch.expiry_date ?? '—'}</div>
+                </div>
+                <div className="detail-field">
+                  <div className="k">Received qty</div>
+                  <div className="v mono">{batch.qty_received}</div>
+                </div>
+                <div className="detail-field">
+                  <div className="k">Remaining</div>
+                  <div className="v mono">{batch.qty_remaining}</div>
+                </div>
+                <div className="detail-field">
+                  <div className="k">Status</div>
+                  <div className="v"><BatchBadge status={batch.status} /></div>
+                </div>
+              </div>
+              {canAdjust && (
+                <div className="form-actions" style={{ marginBottom: 20 }}>
+                  <button type="button" className="btn btn-ghost btn-sm" onClick={startEdit}><Pencil size={14} /> Edit batch</button>
+                </div>
+              )}
+            </>
+          )}
 
           <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Record usage</h3>
           {canUse ? (

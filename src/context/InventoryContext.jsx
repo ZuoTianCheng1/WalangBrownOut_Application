@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import { useSettings } from './SettingsContext.jsx';
-import { getItems, getBatches, getAlerts, resolveAlert as resolveAlertApi, createItem as createItemApi, consumeBatch as consumeBatchApi } from '../services/api.js';
+import { getItems, getBatches, getAlerts, resolveAlert as resolveAlertApi, createItem as createItemApi, consumeBatch as consumeBatchApi, updateBatch as updateBatchApi } from '../services/api.js';
 
 const InventoryContext = createContext(null);
 
@@ -56,13 +56,19 @@ export function InventoryProvider({ children }) {
     return result;
   }, [user]);
 
+  const updateBatch = useCallback(async (lotId, payload) => {
+    const result = await updateBatchApi(lotId, payload);
+    await Promise.all([reloadBatches(), reloadItems(), reloadAlerts()]);
+    return result;
+  }, [reloadBatches, reloadItems, reloadAlerts]);
+
   const addItem = useCallback(async (item) => {
     const created = await createItemApi({ ...item, created_by: user?.name || 'System' });
     setItems((prev) => [created, ...prev]);
     return created;
   }, [user]);
 
-  const value = { items, batches, alerts, resolveAlert, addItem, consumeBatch, reloadItems, reloadBatches };
+  const value = { items, batches, alerts, resolveAlert, addItem, consumeBatch, updateBatch, reloadItems, reloadBatches };
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
 }
