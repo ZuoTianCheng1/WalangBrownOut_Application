@@ -1437,3 +1437,6 @@ body {
 .global-search input { width: 100%; flex: 1 1 auto; min-width: 0; }
 .nav-user { flex: 0 0 auto; }
 @media (min-width: 900px) { .nav-user { display: inline; } }
+
+/* Search: use the free space in the navbar (up to 360px), still shrinks first when tight */
+.global-search { flex: 0 1 360px; min-width: 120px; }
