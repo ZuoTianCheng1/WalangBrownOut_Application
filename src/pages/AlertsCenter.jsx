@@ -74,7 +74,7 @@ export default function AlertsCenter() {
                   {a.resolved ? <div className="alert-audit">Resolved by {a.resolved_by || 'System'}{a.resolved_at ? ` · ${new Date(a.resolved_at).toLocaleString()}` : ''}{a.resolution_notes ? ` · ${a.resolution_notes}` : ''}</div> : <div className="alert-actions">
                     <input aria-label="Resolution note" className="alert-note-input" placeholder="Resolution note (optional)" value={notes[a.id] || ''} onChange={e=>setNotes(n=>({...n,[a.id]:e.target.value}))}/>
                     {can('resolveAlert') && <button className="btn btn-sm btn-primary" onClick={() => handleResolve(a.id)} disabled={resolvingId === a.id}><Check size={14}/>{resolvingId === a.id ? 'Resolving…' : 'Resolve'}</button>}
-                    <button className="btn btn-sm btn-ghost" onClick={()=>snooze(a.id)} title="Snooze for 24 hours"><BellOff size={14}/> Snooze</button>
+                    {can('resolveAlert') && <button className="btn btn-sm btn-ghost" onClick={()=>snooze(a.id)} title="Snooze for 24 hours"><BellOff size={14}/> Snooze</button>}
                   </div>}
                 </div>
               );

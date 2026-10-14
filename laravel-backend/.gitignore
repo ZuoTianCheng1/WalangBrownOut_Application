@@ -1,9 +1,7 @@
-node_modules/
-dist/
 .env
 .env.*
 !.env.example
-laravel-backend/.env
-laravel-backend/vendor/
-laravel-backend/storage/*.key
-laravel-backend/bootstrap/cache/*.php
+/vendor/
+/storage/*.key
+/storage/logs/*.log
+/bootstrap/cache/*.php

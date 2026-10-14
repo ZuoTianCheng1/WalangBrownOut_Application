@@ -163,6 +163,10 @@ export default function Inventory() {
                 <div className="k">Lead time</div>
                 <div className="v">{selected.lead_time_days} days</div>
               </div>
+              <div className="detail-field">
+                <div className="k">Warranty</div>
+                <div className="v">{selected.warranty_months ? `${selected.warranty_months} months` : 'None'}</div>
+              </div>
             </div>
 
             <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Batches (FEFO order)</h3>
@@ -207,7 +211,7 @@ function AddItemModal({ open, onClose, onCreate }) {
   const empty = {
     sku_id: '', name: '', category: categories[0], handling_class: 'STANDARD',
     abc_class: 'B', xyz_class: 'Y', lead_time_days: 7, shelf_life_days: 0,
-    unit_price: 0, reorder_point: 10,
+    unit_price: 0, reorder_point: 10, warranty_months: 0,
   };
   const [form, setForm] = useState(empty);
   const [submitting, setSubmitting] = useState(false);
@@ -275,6 +279,10 @@ function AddItemModal({ open, onClose, onCreate }) {
           <div className="form-field">
             <label>Shelf life (days, 0 = none)</label>
             <input type="number" min="0" value={form.shelf_life_days} onChange={update('shelf_life_days')} />
+          </div>
+          <div className="form-field">
+            <label>Warranty (months, 0 = none)</label>
+            <input type="number" min="0" max="240" value={form.warranty_months} onChange={update('warranty_months')} />
           </div>
           <div className="form-field">
             <label>Unit price (PHP)</label>

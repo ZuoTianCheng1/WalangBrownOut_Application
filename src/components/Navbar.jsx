@@ -25,9 +25,11 @@ export default function Navbar() {
     { to: '/', label: 'Dashboard', end: true },
     { to: '/inventory', label: 'Inventory' },
     { to: '/batches', label: 'Batches' },
+    { to: '/serials', label: 'Serials' },
+    ...(can('purchasing') ? [{ to: '/purchasing', label: 'Purchasing' }] : []),
     { to: '/alerts', label: 'Alerts', badge: true },
     ...(can('reports') ? [{ to: '/reports', label: 'Reports' }] : []),
-    ...(can('settings') ? [{ to: '/settings', label: 'Settings' }] : []),
+    ...(can('settings') ? [{ to: '/audit', label: 'Audit log' }, { to: '/settings', label: 'Settings' }] : []),
   ];
   return <nav className="navbar"><div className="navbar-inner">
     <NavLink to="/" className="navbar-brand"><span className="dot" />WalangBrownout<span className="brand-sub">Inventory system</span></NavLink>

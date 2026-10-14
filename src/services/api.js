@@ -181,3 +181,39 @@ export async function meApi() { return request('/auth/me'); }
 export async function getUsers() { return request('/users'); }
 export async function createUser(user) { return request('/users', { method: 'POST', body: JSON.stringify(user) }); }
 export async function updateUser(id, patch) { return request(`/users/${id}`, { method: 'PATCH', body: JSON.stringify(patch) }); }
+
+// --- Serial numbers & warranty (all roles can read; Admin and Warehouse Staff can write) ---
+const qs = (params = {}) => {
+  const p = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => { if (v !== undefined && v !== null && v !== '') p.set(k, v); });
+  const s = p.toString();
+  return s ? `?${s}` : '';
+};
+/** -> { data: [serial...], summary: { total, in_stock, sold, returned, defective, expiring_soon, expired } } */
+export async function getSerials(params) { return request(`/serials${qs(params)}`); }
+export async function registerSerials(payload) { return request('/serials', { method: 'POST', body: JSON.stringify(payload) }); }
+/** payload: { to: 'sold'|'returned'|'defective', customer_name?, customer_contact?, sold_at?, notes? } */
+export async function changeSerialStatus(id, payload) { return request(`/serials/${id}/status`, { method: 'POST', body: JSON.stringify(payload) }); }
+
+// --- Purchasing (Admin and Warehouse Staff; approving is Admin only) ---
+export async function getSuppliers() { return request('/suppliers'); }
+export async function createSupplier(supplier) { return request('/suppliers', { method: 'POST', body: JSON.stringify(supplier) }); }
+export async function updateSupplier(id, supplier) { return request(`/suppliers/${id}`, { method: 'PUT', body: JSON.stringify(supplier) }); }
+export async function getPurchaseOrders(status) { return request(`/purchase-orders${qs({ status })}`); }
+/** -> { purchase_order, lines: [...], batches: [...] } */
+export async function getPurchaseOrder(id) { return request(`/purchase-orders/${id}`); }
+export async function createPurchaseOrder(payload) { return request('/purchase-orders', { method: 'POST', body: JSON.stringify(payload) }); }
+export async function approvePurchaseOrder(id) { return request(`/purchase-orders/${id}/approve`, { method: 'POST' }); }
+export async function cancelPurchaseOrder(id, reason) { return request(`/purchase-orders/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) }); }
+/** lines: [{ line_id, lot_id, quantity, received_date?, expiry_date? }] */
+export async function receivePurchaseOrder(id, lines) { return request(`/purchase-orders/${id}/receive`, { method: 'POST', body: JSON.stringify({ lines }) }); }
+export async function getReorderSuggestions() { return request('/reports/reorder-suggestions'); }
+
+// --- Audit log (Admin only) ---
+/** -> { data, total, page, per_page, actions, entity_types, actors } */
+export async function getAudit(params) { return request(`/audit${qs(params)}`); }
+
+// Revoke the session on the server. Uses fetch directly so a stale token can never trigger the sign-out loop.
+export async function logoutApi(token) {
+  try { await fetch(`${API_BASE_URL}/auth/logout`, { method: 'POST', headers: { Accept: 'application/json', Authorization: `Bearer ${token}` } }); } catch { /* ignore */ }
+}

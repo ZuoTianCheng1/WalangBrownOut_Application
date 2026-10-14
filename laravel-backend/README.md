@@ -1,9 +1,9 @@
 # WalangBrownout IMS — Laravel + MySQL backend
 
-This package adds a Laravel 11 JSON API under `laravel-backend/`. The existing React/Vite frontend remains in the project root. Its API base defaults to `http://localhost:8000/api`.
+This package adds a Laravel 13 JSON API under `laravel-backend/`. The existing React/Vite frontend remains in the project root. Its API base defaults to `http://localhost:8000/api`.
 
 ## Requirements
-- PHP 8.2+
+- PHP 8.4+
 - Composer 2
 - MySQL 8+
 - PHP extensions: `pdo_mysql`, `openssl`, `mbstring`, `tokenizer`, `xml`, `ctype`, `curl`, `fileinfo`

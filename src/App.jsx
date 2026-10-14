@@ -12,6 +12,9 @@ import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { SettingsProvider, useSettings } from './context/SettingsContext.jsx';
 import Reports from './pages/Reports.jsx';
 import Settings from './pages/Settings.jsx';
+import Serials from './pages/Serials.jsx';
+import Purchasing from './pages/Purchasing.jsx';
+import AuditLog from './pages/AuditLog.jsx';
 
 function PermissionRoute({ permission, children }) {
   const { can } = useAuth();
@@ -32,8 +35,11 @@ function ProtectedApp() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/batches" element={<Batches />} />
+            <Route path="/serials" element={<Serials />} />
+            <Route path="/purchasing" element={<PermissionRoute permission="purchasing"><Purchasing /></PermissionRoute>} />
             <Route path="/alerts" element={<AlertsCenter />} />
             <Route path="/reports" element={<Reports />} />
+            <Route path="/audit" element={<PermissionRoute permission="settings"><AuditLog /></PermissionRoute>} />
             <Route path="/settings" element={<PermissionRoute permission="settings"><Settings /></PermissionRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
