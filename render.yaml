@@ -1,0 +1,24 @@
+# Render Blueprint: hosts the Express API so the Vercel frontend has a backend.
+# Render dashboard -> New -> Blueprint -> pick this repo. Then set ADMIN_PASSWORD and CLIENT_ORIGIN.
+services:
+  - type: web
+    name: walangbrownout-api
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.js
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 22
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: DATABASE_PATH
+        value: ./data/inventory.sqlite
