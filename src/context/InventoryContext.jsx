@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import { useSettings } from './SettingsContext.jsx';
-import { getItems, getBatches, getAlerts, resolveAlert as resolveAlertApi, createItem as createItemApi, consumeBatch as consumeBatchApi } from '../services/api.js';
+import { getItems, getBatches, getAlerts, resolveAlert as resolveAlertApi, createItem as createItemApi, consumeBatch as consumeBatchApi, deleteBatch as deleteBatchApi, purgeExpiredBatches as purgeExpiredBatchesApi } from '../services/api.js';
 
 const InventoryContext = createContext(null);
 
@@ -62,7 +62,23 @@ export function InventoryProvider({ children }) {
     return created;
   }, [user]);
 
-  const value = { items, batches, alerts, resolveAlert, addItem, consumeBatch, reloadItems, reloadBatches };
+  const deleteBatch = useCallback(async (lotId) => {
+    const res = await deleteBatchApi(lotId);
+    setBatches((prev) => (prev ? prev.filter((b) => b.lot_id !== lotId) : []));
+    reloadAlerts();
+    reloadItems();
+    return res;
+  }, [reloadAlerts, reloadItems]);
+
+  const purgeExpiredBatches = useCallback(async () => {
+    const res = await purgeExpiredBatchesApi();
+    setBatches((prev) => (prev ? prev.filter((b) => b.status !== 'expired') : []));
+    reloadAlerts();
+    reloadItems();
+    return res;
+  }, [reloadAlerts, reloadItems]);
+
+  const value = { items, batches, alerts, resolveAlert, addItem, consumeBatch, deleteBatch, purgeExpiredBatches, reloadItems, reloadBatches };
 
   return <InventoryContext.Provider value={value}>{children}</InventoryContext.Provider>;
 }
