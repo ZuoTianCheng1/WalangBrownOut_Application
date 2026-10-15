@@ -47,12 +47,83 @@ An inventory management system with batch/expiry tracking, valuation by category
 
 ```
 WalangBrownOut_Application-main/
-├── laravel-backend/     # Laravel API (composer.json, artisan, .env.example)
-├── ...                  # Frontend (package.json, .env.example) in the project root
+├── laravel-backend/
+│   ├── bootstrap/
+│   │   ├── app.php
+│   │   └── providers.php
+│   ├── config/
+│   │   ├── app.php
+│   │   ├── cors.php
+│   │   └── database.php
+│   ├── database/
+│   │   ├── migrations/
+│   │   │   ├── 2026_01_01_000000_create_ims_tables.php
+│   │   │   └── 2026_10_15_000000_add_serials_warranty_and_po_workflow.php
+│   │   └── seeders/
+│   │       ├── BatchPageSeeder.php
+│   │       ├── DatabaseSeeder.php
+│   │       └── DemoDataSeeder.php
+│   ├── public/
+│   │   └── index.php
+│   ├── routes/
+│   │   ├── alerts_sync.php
+│   │   ├── api.php
+│   │   ├── console.php
+│   │   └── web.php
+│   ├── tests/
+│   │   └── Feature/
+│   │       └── HealthEndpointTest.php
+│   ├── .env.example
+│   ├── artisan
+│   ├── composer.json
+│   ├── composer.lock
+│   ├── Dockerfile
+│   ├── Dockerfile.render
+│   └── docker-compose.yml
+├── src/
+│   ├── components/
+│   │   ├── ApiStrip.jsx
+│   │   ├── Badges.jsx
+│   │   ├── Footer.jsx
+│   │   ├── Modal.jsx
+│   │   └── Navbar.jsx
+│   ├── context/
+│   │   ├── AuthContext.jsx
+│   │   ├── InventoryContext.jsx
+│   │   └── SettingsContext.jsx
+│   ├── data/
+│   │   └── mockData.js
+│   ├── pages/
+│   │   ├── AlertsCenter.jsx
+│   │   ├── AuditLog.jsx
+│   │   ├── Batches.jsx
+│   │   ├── Dashboard.jsx
+│   │   ├── Inventory.jsx
+│   │   ├── Login.jsx
+│   │   ├── NotFound.jsx
+│   │   ├── Purchasing.jsx
+│   │   ├── Reports.jsx
+│   │   ├── Serials.jsx
+│   │   └── Settings.jsx
+│   ├── services/
+│   │   └── api.js
+│   ├── styles/
+│   │   ├── features.css
+│   │   └── index.css
+│   ├── utils/
+│   │   └── format.js
+│   ├── App.jsx
+│   └── main.jsx
+├── .env.example
+├── .gitignore
+├── index.html
+├── package.json
+├── package-lock.json
+├── render.yaml
+├── vercel.json
+├── vite.config.js
 └── README.md
 ```
-
-> Adjust this tree if your frontend lives in a different folder.
 
 ---
 
@@ -237,7 +308,6 @@ Log in with the `ADMIN_USERNAME` and `ADMIN_PASSWORD` you set in `laravel-backen
 | Username | _<value of `ADMIN_USERNAME`>_         |
 | Password | _<value of `ADMIN_PASSWORD`>_         |
 
-> For the teacher's demo, you may write the demo credentials here. Do not use a real or reused password.
 
 Changing `.env` after the admin account has been created does **not** update the existing account. To reset it, change the password through the app or with `php artisan tinker`.
 
