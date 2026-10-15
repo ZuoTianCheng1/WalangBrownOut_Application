@@ -1,0 +1,117 @@
+/* Polished stock-issue form for the Batches page */
+.issue-stock-panel {
+  margin: 0 0 22px;
+  padding: 22px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-md, 12px);
+  background: var(--surface, #101010);
+}
+.issue-stock-heading {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.issue-stock-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  color: var(--teal, #65d5c4);
+  background: var(--teal-dim, rgba(101,213,196,.12));
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+}
+.issue-stock-heading .section-title {
+  margin: 0 0 5px;
+  font-size: 1.12rem;
+  line-height: 1.35;
+}
+.issue-stock-heading .muted {
+  margin: 0;
+  max-width: 720px;
+  font-size: .88rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+.issue-stock-form {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.6fr) minmax(110px, .65fr) minmax(190px, 1.2fr) auto;
+  gap: 14px;
+  align-items: end;
+}
+.issue-stock-form .form-field {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 7px;
+  margin: 0;
+}
+.issue-stock-form .form-field > span {
+  color: var(--text-muted);
+  font-size: .78rem;
+  font-weight: 600;
+}
+.issue-stock-form input,
+.issue-stock-form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 12px;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font: inherit;
+  font-size: .88rem;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.issue-stock-form input:focus,
+.issue-stock-form select:focus {
+  border-color: var(--teal, #65d5c4);
+  box-shadow: 0 0 0 3px var(--teal-dim, rgba(101,213,196,.12));
+}
+.issue-submit-wrap { min-width: 142px; }
+.issue-submit {
+  min-height: 42px;
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.issue-submit:disabled { opacity: .55; cursor: not-allowed; }
+.issue-allocations {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius-sm);
+  background: var(--surface-raised);
+}
+.issue-allocations h3 { margin: 0 0 10px; font-size: .9rem; }
+.issue-allocations ul { list-style: none; padding: 0; margin: 0; }
+.issue-allocations li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+  border-top: 1px solid var(--border-soft);
+  font-size: .85rem;
+}
+.issue-allocations code { font-size: .82rem; }
+@media (max-width: 980px) {
+  .issue-stock-form { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .issue-reason-field { grid-column: 1 / 2; }
+  .issue-submit-wrap { grid-column: 2 / 3; }
+}
+@media (max-width: 560px) {
+  .issue-stock-panel { padding: 16px; }
+  .issue-stock-form { grid-template-columns: minmax(0, 1fr); }
+  .issue-reason-field, .issue-submit-wrap { grid-column: auto; }
+  .issue-submit-wrap { min-width: 0; }
+}

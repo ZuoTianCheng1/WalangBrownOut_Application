@@ -244,6 +244,8 @@ export async function cancelPurchaseOrder(id, reason) { return request(`/purchas
 /** lines: [{ line_id, lot_id, quantity, received_date?, expiry_date? }] */
 export async function receivePurchaseOrder(id, lines) { return request(`/purchase-orders/${id}/receive`, { method: 'POST', body: JSON.stringify({ lines }) }); }
 export async function getReorderSuggestions() { return request('/reports/reorder-suggestions'); }
+/** Issue stock across eligible lots using backend FIFO/FEFO ordering. */
+export async function issueStock(payload) { return request('/stock/issue', { method: 'POST', body: JSON.stringify(payload) }); }
 
 // --- Audit log (Admin only) ---
 /** -> { data, total, page, per_page, actions, entity_types, actors } */

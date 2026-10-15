@@ -4,9 +4,11 @@ import { useInventory } from '../context/InventoryContext.jsx';
 import { BatchBadge } from '../components/Badges.jsx';
 import Modal from '../components/Modal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
+import { issueStock } from '../services/api.js';
+import '../styles/issue-stock.css';
 
 export default function Batches() {
-  const { items, batches, consumeBatch, deleteBatch, purgeExpiredBatches } = useInventory();
+  const { items, batches, consumeBatch, deleteBatch, purgeExpiredBatches, reloadBatches, reloadItems } = useInventory();
   const { can } = useAuth();
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
@@ -17,6 +19,10 @@ export default function Batches() {
   const [busy, setBusy] = useState(false);
   const [notice, setNotice] = useState('');
   const [noticeType, setNoticeType] = useState('info');
+  const [issueSku, setIssueSku] = useState('');
+  const [issueQuantity, setIssueQuantity] = useState('1');
+  const [issueReason, setIssueReason] = useState('Sale / stock issue');
+  const [issueAllocations, setIssueAllocations] = useState([]);
 
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState({ key: 'expiry_date', dir: 'asc' });
@@ -103,6 +109,15 @@ export default function Batches() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const handleIssueStock = async (event) => {
+    event.preventDefault(); setBusy(true); setNotice(''); setIssueAllocations([]);
+    try { const result = await issueStock({ sku_id: issueSku, quantity: Number(issueQuantity), reason: issueReason.trim() });
+      setIssueAllocations(result.allocations || []); setNoticeType('info'); setNotice(`Issued ${result.issued} unit(s) using automatic FIFO/FEFO allocation.`);
+      await Promise.all([reloadBatches(), reloadItems()]);
+    } catch (err) { setNoticeType('error'); setNotice(err.message || 'Could not issue stock.'); }
+    finally { setBusy(false); }
   };
 
   return (
@@ -201,7 +216,44 @@ export default function Batches() {
           <div className="alert-loading">Loading batches…</div>
         ) : (
           <div className="table-wrap">
-            <table className="data-table">
+            <section className="panel issue-stock-panel">
+        <div className="issue-stock-heading">
+          <div className="issue-stock-icon"><PackageMinus size={19} /></div>
+          <div>
+            <h2 className="section-title">Issue stock</h2>
+            <p className="muted">Automatic FIFO/FEFO deduction from eligible lots, prioritizing earliest expiry.</p>
+          </div>
+        </div>
+        <form onSubmit={handleIssueStock} className="issue-stock-form">
+          <label className="form-field">
+            <span>Item / SKU</span>
+            <select value={issueSku} onChange={(e) => setIssueSku(e.target.value)} required>
+              <option value="">Select an item</option>
+              {(items || []).map((item) => <option key={item.sku_id} value={item.sku_id}>{item.sku_id} — {item.name}</option>)}
+            </select>
+          </label>
+          <label className="form-field">
+            <span>Quantity</span>
+            <input type="number" min="1" step="1" value={issueQuantity} onChange={(e) => setIssueQuantity(e.target.value)} required />
+          </label>
+          <label className="form-field issue-reason-field">
+            <span>Reason</span>
+            <input value={issueReason} onChange={(e) => setIssueReason(e.target.value)} minLength="3" maxLength="300" required />
+          </label>
+          <div className="issue-submit-wrap">
+            <button type="submit" className="btn btn-primary issue-submit" disabled={busy || !issueSku || Number(issueQuantity) < 1}>
+              <PackageMinus size={16} /> {busy ? 'Processing…' : 'Issue stock'}
+            </button>
+          </div>
+        </form>
+        {issueAllocations.length > 0 && (
+          <div className="issue-allocations">
+            <h3>Lot allocations</h3>
+            <ul>{issueAllocations.map((a) => <li key={a.lot_id}><span>Lot <code>{a.lot_id}</code></span><strong>{a.quantity} unit(s)</strong></li>)}</ul>
+          </div>
+        )}
+      </section>
+      <table className="data-table">
               <thead>
                 <tr>
                   <th onClick={() => sortBy('lot_id')} className="sortable">Lot ↕</th>
