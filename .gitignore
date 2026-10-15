@@ -8,5 +8,4 @@ vendor/
 *.log
 laravel-backend/bootstrap/cache/*.php
 
-backend/data/
 laravel-backend/storage/

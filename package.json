@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "dev:full": "concurrently \"npm run dev\" \"npm run backend\"",
-    "backend": "npm --prefix backend run dev"
+    "backend": "php laravel-backend/artisan serve"
   },
   "dependencies": {
     "lucide-react": "^0.468.0",
