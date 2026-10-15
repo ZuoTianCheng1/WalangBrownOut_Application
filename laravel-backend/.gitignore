@@ -5,3 +5,7 @@
 /storage/*.key
 /storage/logs/*.log
 /bootstrap/cache/*.php
+/storage/framework/cache/data/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
