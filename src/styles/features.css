@@ -51,3 +51,30 @@ tr.clickable.expanded { background: var(--surface-raised); }
   .line-row, .line-head { grid-template-columns: minmax(0, 1fr) 64px 84px 34px; }
   .receive-grid { grid-template-columns: 1fr; }
 }
+
+.btn-danger {
+  background: var(--red);
+  border-color: var(--red);
+  color: #ffffff;
+}
+.btn-danger:hover {
+  filter: brightness(1.1);
+  color: #ffffff;
+}
+.btn-danger-ghost {
+  background: transparent;
+  border-color: transparent;
+  color: var(--red);
+}
+.btn-danger-ghost:hover {
+  background: var(--red-dim);
+  color: var(--red);
+}
+.expired-callout {
+  margin: 18px 0;
+  padding: 14px 16px;
+  background: var(--red-dim);
+  border: 1px solid rgba(214, 69, 80, 0.4);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+}

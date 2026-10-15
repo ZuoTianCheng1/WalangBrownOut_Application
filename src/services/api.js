@@ -146,6 +146,40 @@ export async function consumeBatch(lotId, quantity, reason = 'Sale', actor = 'Sy
   return { batch, history: batch?.history ?? [] };
 }
 
+/** DELETE /batches/:lot_id
+ *  Removes an expired batch
+ */
+export async function deleteBatch(lotId) {
+  if (USE_MOCK) {
+    const batch = _batches.find((b) => b.lot_id === lotId);
+    if (!batch) throw new Error('Batch not found.');
+    _batches = _batches.filter((b) => b.lot_id !== lotId);
+    _batchHistory.delete(lotId);
+    _alerts = _alerts.filter((a) => a.lot_id !== lotId);
+    return delay({ ok: true, lot_id: lotId }, 200);
+  }
+  return request(`/batches/${encodeURIComponent(lotId)}`, { method: 'DELETE' });
+}
+
+/** POST /batches/purge-expired
+ *  Removes all expired batches
+ */
+export async function purgeExpiredBatches() {
+  if (USE_MOCK) {
+    const today = new Date().toISOString().slice(0, 10);
+    const expiredLots = _batches
+      .filter((b) => b.status === 'expired' || (b.expiry_date && b.expiry_date < today))
+      .map((b) => b.lot_id);
+    _batches = _batches.filter((b) => !expiredLots.includes(b.lot_id));
+    expiredLots.forEach((lot) => {
+      _batchHistory.delete(lot);
+      _alerts = _alerts.filter((a) => a.lot_id !== lot);
+    });
+    return delay({ ok: true, count: expiredLots.length, deleted_lots: expiredLots }, 250);
+  }
+  return request('/batches/purge-expired', { method: 'POST' });
+}
+
 /** GET /alerts?status=all
  *  -> [{ id, tier: 'critical'|'warning'|'info', kind, sku_id, lot_id,
  *        title, meta, resolved }] */

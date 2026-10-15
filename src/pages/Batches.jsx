@@ -1,49 +1,195 @@
 import { useMemo, useState } from 'react';
-import { PackageMinus } from 'lucide-react';
+import { PackageMinus, Search, Trash2 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext.jsx';
 import { BatchBadge } from '../components/Badges.jsx';
 import Modal from '../components/Modal.jsx';
 import { useAuth } from '../context/AuthContext.jsx';
 
 export default function Batches() {
-  const { items, batches, consumeBatch } = useInventory();
+  const { items, batches, consumeBatch, deleteBatch, purgeExpiredBatches } = useInventory();
   const { can } = useAuth();
+  const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [sku, setSku] = useState('All');
   const [selectedLotId, setSelectedLotId] = useState(null);
+  const [batchToDelete, setBatchToDelete] = useState(null);
+  const [purgeModalOpen, setPurgeModalOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState('');
+  const [noticeType, setNoticeType] = useState('info');
+
+  const [page, setPage] = useState(1);
+  const [sort, setSort] = useState({ key: 'expiry_date', dir: 'asc' });
+  const pageSize = 10;
 
   const nameFor = (skuId) => items?.find((i) => i.sku_id === skuId)?.name ?? skuId;
 
+  const expiredBatches = useMemo(() => {
+    return batches ? batches.filter((b) => b.status === 'expired') : [];
+  }, [batches]);
+  const expiredCount = expiredBatches.length;
+  const expiredUnits = expiredBatches.reduce((acc, b) => acc + (b.qty_remaining || 0), 0);
+
   const filtered = useMemo(() => {
     if (!batches) return [];
-    return batches
-      .filter((b) => statusFilter === 'All' || b.status === statusFilter)
-      .filter((b) => sku === 'All' || b.sku_id === sku)
-      .sort((a, b) => (a.expiry_date ?? '9999').localeCompare(b.expiry_date ?? '9999'));
-  }, [batches, statusFilter, sku]);
+    const q = query.trim().toLowerCase();
+    return batches.filter((b) => {
+      const itemName = nameFor(b.sku_id).toLowerCase();
+      const lotId = (b.lot_id || '').toLowerCase();
+      const skuId = (b.sku_id || '').toLowerCase();
+      const matchesQuery = !q || lotId.includes(q) || itemName.includes(q) || skuId.includes(q);
+      const matchesStatus = statusFilter === 'All' || b.status === statusFilter;
+      const matchesSku = sku === 'All' || b.sku_id === sku;
+      return matchesQuery && matchesStatus && matchesSku;
+    });
+  }, [batches, query, statusFilter, sku, items]);
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      let av = a[sort.key] ?? '';
+      let bv = b[sort.key] ?? '';
+      if (sort.key === 'item_name') {
+        av = nameFor(a.sku_id);
+        bv = nameFor(b.sku_id);
+      } else if (sort.key === 'expiry_date') {
+        av = av || '9999-12-31';
+        bv = bv || '9999-12-31';
+      }
+      const cmp = typeof av === 'number' && typeof bv === 'number' ? av - bv : String(av).localeCompare(String(bv));
+      return sort.dir === 'asc' ? cmp : -cmp;
+    });
+  }, [filtered, sort, items]);
+
+  const pageCount = Math.max(1, Math.ceil(sorted.length / pageSize));
+  const pageBatches = sorted.slice((page - 1) * pageSize, page * pageSize);
+  const sortBy = (key) => {
+    setSort((old) => ({ key, dir: old.key === key && old.dir === 'asc' ? 'desc' : 'asc' }));
+    setPage(1);
+  };
 
   const selected = useMemo(
     () => batches?.find((b) => b.lot_id === selectedLotId) ?? null,
     [batches, selectedLotId]
   );
 
+  const handleDeleteSingle = async () => {
+    if (!batchToDelete) return;
+    setBusy(true);
+    try {
+      await deleteBatch(batchToDelete.lot_id);
+      setNoticeType('info');
+      setNotice(`Expired batch lot ${batchToDelete.lot_id} was successfully removed.`);
+      setBatchToDelete(null);
+      if (selectedLotId === batchToDelete.lot_id) setSelectedLotId(null);
+    } catch (err) {
+      setNoticeType('error');
+      setNotice(err.message || 'Failed to remove batch.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handlePurgeExpired = async () => {
+    setBusy(true);
+    try {
+      const res = await purgeExpiredBatches();
+      setNoticeType('info');
+      setNotice(`Successfully purged ${res?.count ?? expiredCount} expired ${res?.count === 1 ? 'batch' : 'batches'}.`);
+      setPurgeModalOpen(false);
+      if (selected && selected.status === 'expired') setSelectedLotId(null);
+    } catch (err) {
+      setNoticeType('error');
+      setNotice(err.message || 'Failed to remove expired batches.');
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className="container-wide">
-      <p className="kicker">Batches</p>
-      <h1 className="page-title">Every open lot, oldest expiry first.</h1>
+      <div className="page-header-row">
+        <div>
+          <p className="kicker">Batches</p>
+          <h1 className="page-title">Every open lot, oldest expiry first.</h1>
+        </div>
+        {can('adjustStock') && expiredCount > 0 && (
+          <button
+            type="button"
+            className="btn btn-danger"
+            onClick={() => setPurgeModalOpen(true)}
+            title="Remove all expired batches"
+          >
+            <Trash2 size={16} /> Delete all expired ({expiredCount})
+          </button>
+        )}
+      </div>
       <p className="page-lede">
-        Open a lot to record stock usage or review its movement history.
+        Search, filter, open a lot to record stock usage, and remove expired products.
       </p>
+
+      {notice && (
+        <div className={`banner${noticeType === 'error' ? ' error' : ''}`} role="status">
+          <span>{notice}</span>
+          <button aria-label="Dismiss" onClick={() => setNotice('')}>&times;</button>
+        </div>
+      )}
 
       <section className="section">
         <div className="toolbar">
-          <select className="select-input" value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
+          <div className="search-input">
+            <Search size={16} />
+            <input
+              placeholder="Search by lot, item name, or SKU…"
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setPage(1);
+              }}
+            />
+          </div>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => localStorage.setItem('ims_saved_batches_filter', JSON.stringify({ statusFilter, sku, query }))}
+          >
+            Save filter
+          </button>
+          <button
+            type="button"
+            className="btn btn-ghost btn-sm"
+            onClick={() => {
+              try {
+                const f = JSON.parse(localStorage.getItem('ims_saved_batches_filter') || '{}');
+                setStatusFilter(f.statusFilter || 'All');
+                setSku(f.sku || 'All');
+                setQuery(f.query || '');
+                setPage(1);
+              } catch {}
+            }}
+          >
+            Load saved
+          </button>
+          <select
+            className="select-input"
+            value={statusFilter}
+            onChange={(e) => {
+              setStatusFilter(e.target.value);
+              setPage(1);
+            }}
+          >
             <option value="All">All statuses</option>
             <option value="active">Active</option>
             <option value="near_expiry">Near expiry</option>
             <option value="expired">Expired</option>
           </select>
-          <select className="select-input" value={sku} onChange={(e) => setSku(e.target.value)}>
+          <select
+            className="select-input"
+            value={sku}
+            onChange={(e) => {
+              setSku(e.target.value);
+              setPage(1);
+            }}
+          >
             <option value="All">All items</option>
             {items?.map((i) => (
               <option key={i.sku_id} value={i.sku_id}>{i.name}</option>
@@ -58,13 +204,13 @@ export default function Batches() {
             <table className="data-table">
               <thead>
                 <tr>
-                  <th>Lot</th>
-                  <th>Item</th>
-                  <th>Received</th>
-                  <th>Expiry</th>
-                  <th>Received qty</th>
-                  <th>Remaining</th>
-                  <th>Status</th>
+                  <th onClick={() => sortBy('lot_id')} className="sortable">Lot ↕</th>
+                  <th onClick={() => sortBy('item_name')} className="sortable">Item ↕</th>
+                  <th onClick={() => sortBy('received_date')} className="sortable">Received ↕</th>
+                  <th onClick={() => sortBy('expiry_date')} className="sortable">Expiry ↕</th>
+                  <th onClick={() => sortBy('qty_received')} className="sortable">Received qty ↕</th>
+                  <th onClick={() => sortBy('qty_remaining')} className="sortable">Remaining ↕</th>
+                  <th onClick={() => sortBy('status')} className="sortable">Status ↕</th>
                   <th></th>
                 </tr>
               </thead>
@@ -72,7 +218,7 @@ export default function Batches() {
                 {filtered.length === 0 ? (
                   <tr><td colSpan={8} className="table-empty">No batches match those filters.</td></tr>
                 ) : (
-                  filtered.map((b) => (
+                  pageBatches.map((b) => (
                     <tr key={b.lot_id} className="clickable" onClick={() => setSelectedLotId(b.lot_id)}>
                       <td className="mono">{b.lot_id}</td>
                       <td>{nameFor(b.sku_id)}</td>
@@ -82,13 +228,33 @@ export default function Batches() {
                       <td className="mono">{b.qty_remaining}</td>
                       <td><BatchBadge status={b.status} /></td>
                       <td>
-                        {can('adjustStock') && <button
-                          type="button"
-                          className="btn btn-ghost btn-sm"
-                          onClick={(e) => { e.stopPropagation(); setSelectedLotId(b.lot_id); }}
-                        >
-                          <PackageMinus size={14} /> Use
-                        </button>}
+                        <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                          {can('adjustStock') && b.status === 'expired' && (
+                            <button
+                              type="button"
+                              className="btn btn-danger-ghost btn-sm"
+                              title="Delete expired batch"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setBatchToDelete(b);
+                              }}
+                            >
+                              <Trash2 size={14} /> Delete
+                            </button>
+                          )}
+                          {can('adjustStock') && b.status !== 'expired' && b.qty_remaining > 0 && (
+                            <button
+                              type="button"
+                              className="btn btn-ghost btn-sm"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedLotId(b.lot_id);
+                              }}
+                            >
+                              <PackageMinus size={14} /> Use
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -97,26 +263,150 @@ export default function Batches() {
             </table>
           </div>
         )}
+
+        {!!batches && (
+          <div className="pagination">
+            <span>{filtered.length} batches · page {Math.min(page, pageCount)} of {pageCount}</span>
+            <div>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                Previous
+              </button>
+              <button
+                type="button"
+                className="btn btn-ghost btn-sm"
+                disabled={page >= pageCount}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        )}
       </section>
 
+      {/* Batch Details & Usage Modal */}
       <BatchDetailModal
         batch={selected}
         itemName={selected ? nameFor(selected.sku_id) : ''}
         onClose={() => setSelectedLotId(null)}
         consumeBatch={consumeBatch}
+        onDelete={(b) => setBatchToDelete(b)}
         canAdjust={can('adjustStock')}
       />
+
+      {/* Delete Single Expired Batch Confirmation Modal */}
+      <Modal
+        open={!!batchToDelete}
+        onClose={() => !busy && setBatchToDelete(null)}
+        title={batchToDelete ? `Delete Expired Batch — ${batchToDelete.lot_id}` : ''}
+      >
+        {batchToDelete && (
+          <div>
+            <p style={{ margin: '0 0 14px', lineHeight: 1.5 }}>
+              Are you sure you want to permanently delete expired lot <strong className="mono">{batchToDelete.lot_id}</strong> for <strong>{nameFor(batchToDelete.sku_id)}</strong>?
+            </p>
+            <div className="detail-grid" style={{ marginBottom: 16 }}>
+              <div className="detail-field">
+                <div className="k">Item</div>
+                <div className="v">{nameFor(batchToDelete.sku_id)} ({batchToDelete.sku_id})</div>
+              </div>
+              <div className="detail-field">
+                <div className="k">Expiry date</div>
+                <div className="v mono">{batchToDelete.expiry_date || '—'}</div>
+              </div>
+              <div className="detail-field">
+                <div className="k">Units remaining</div>
+                <div className="v mono">{batchToDelete.qty_remaining}</div>
+              </div>
+              <div className="detail-field">
+                <div className="k">Status</div>
+                <div className="v"><BatchBadge status={batchToDelete.status} /></div>
+              </div>
+            </div>
+            <div className="step-note" style={{ marginBottom: 18 }}>
+              This operation deletes the expired batch from inventory, clears related movements and alerts, and records the deletion in the audit log.
+            </div>
+            <div className="modal-footer-actions">
+              <button
+                type="button"
+                className="btn btn-ghost"
+                disabled={busy}
+                onClick={() => setBatchToDelete(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn btn-danger"
+                disabled={busy}
+                onClick={handleDeleteSingle}
+              >
+                <Trash2 size={14} /> {busy ? 'Deleting…' : 'Confirm delete'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
+
+      {/* Purge All Expired Batches Confirmation Modal */}
+      <Modal
+        open={purgeModalOpen}
+        onClose={() => !busy && setPurgeModalOpen(false)}
+        title="Delete All Expired Batches"
+      >
+        <div>
+          <p style={{ margin: '0 0 14px', lineHeight: 1.5 }}>
+            Are you sure you want to delete all <strong>{expiredCount}</strong> expired {expiredCount === 1 ? 'batch' : 'batches'} totaling <strong>{expiredUnits}</strong> units from inventory?
+          </p>
+          <div style={{ maxHeight: 180, overflowY: 'auto', border: '1px solid var(--border-soft)', borderRadius: 'var(--radius-sm)', padding: '10px 14px', marginBottom: 16 }}>
+            <ul style={{ margin: 0, paddingLeft: 18, fontSize: '0.86rem', lineHeight: 1.6 }}>
+              {expiredBatches.map((b) => (
+                <li key={b.lot_id}>
+                  <strong className="mono">{b.lot_id}</strong>: {nameFor(b.sku_id)} — Expired {b.expiry_date} ({b.qty_remaining} units)
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div className="step-note" style={{ marginBottom: 18 }}>
+            All expired lots and their open alerts will be cleared. This purge action is recorded in the audit trail.
+          </div>
+          <div className="modal-footer-actions">
+            <button
+              type="button"
+              className="btn btn-ghost"
+              disabled={busy}
+              onClick={() => setPurgeModalOpen(false)}
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              className="btn btn-danger"
+              disabled={busy}
+              onClick={handlePurgeExpired}
+            >
+              <Trash2 size={14} /> {busy ? 'Deleting all…' : `Delete ${expiredCount} expired batches`}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
 
-function BatchDetailModal({ batch, itemName, onClose, consumeBatch, canAdjust }) {
+function BatchDetailModal({ batch, itemName, onClose, consumeBatch, onDelete, canAdjust }) {
   const [quantity, setQuantity] = useState('');
   const [reason, setReason] = useState('Sale');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
   const canUse = canAdjust && !!batch && batch.status !== 'expired' && batch.qty_remaining > 0;
+  const isExpired = batch?.status === 'expired';
 
   const handleUse = async (e) => {
     e.preventDefault();
@@ -133,9 +423,6 @@ function BatchDetailModal({ batch, itemName, onClose, consumeBatch, canAdjust })
     }
     setSubmitting(true);
     try {
-      // This is the real-time deduction that keeps qty_on_hand honest — every
-      // call updates the batch, the item total, and the movement history below
-      // in one round trip, instead of waiting for a weekly spreadsheet count.
       await consumeBatch(batch.lot_id, qty, reason.trim() || 'Sale');
       setQuantity('');
     } catch (err) {
@@ -175,6 +462,31 @@ function BatchDetailModal({ batch, itemName, onClose, consumeBatch, canAdjust })
               <div className="v"><BatchBadge status={batch.status} /></div>
             </div>
           </div>
+
+          {isExpired && (
+            <div className="expired-callout">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+                <div>
+                  <strong style={{ display: 'block', color: 'var(--red)', marginBottom: 2 }}>This batch is expired.</strong>
+                  <span style={{ fontSize: '0.84rem', color: 'var(--text-muted)' }}>
+                    Expired stock is disqualified from FEFO picking and should be removed from active inventory.
+                  </span>
+                </div>
+                {canAdjust && (
+                  <button
+                    type="button"
+                    className="btn btn-danger btn-sm"
+                    onClick={() => {
+                      onClose();
+                      onDelete(batch);
+                    }}
+                  >
+                    <Trash2 size={14} /> Delete expired batch
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
 
           <h3 style={{ fontSize: '0.95rem', marginBottom: 10 }}>Record usage</h3>
           {canUse ? (
