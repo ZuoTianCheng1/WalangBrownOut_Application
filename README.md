@@ -2,11 +2,6 @@
 
 An inventory management system with batch/expiry tracking, valuation by category and class, role-based access, and an audit log. It consists of a **Laravel (PHP) API backend** backed by **MySQL**, and a **Vite-based frontend** that talks to the API.
 
-> **Course / Subject:** _<fill in>_
-> **Instructor:** _<fill in>_
-> **Group members:** _<fill in names and roles>_
-> **Submission date:** _<fill in>_
-
 ---
 
 ## Table of Contents
@@ -313,12 +308,3 @@ This is a production-oriented foundation, not a completed production system. Bef
 - API endpoints for batch receiving and full report generation (some report/export screens may need endpoint alignment)
 - Existing demo data is not imported automatically
 
----
-
-## Screenshots
-
-_<Add screenshots of the login page, dashboard, inventory list, batch/expiry view, and audit log here.>_
-
-```
-![Dashboard](docs/screenshots/dashboard.png)
-```
