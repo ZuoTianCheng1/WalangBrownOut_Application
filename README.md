@@ -16,8 +16,6 @@ An inventory management system with batch/expiry tracking, valuation by category
 8. [Setting Up on a New Device (Checklist)](#setting-up-on-a-new-device-checklist)
 9. [Troubleshooting](#troubleshooting)
 10. [Security Overview](#security-overview)
-11. [Known Limitations](#known-limitations)
-12. [Screenshots](#screenshots)
 
 ---
 
@@ -291,20 +289,3 @@ The database is **local to each device**. Accounts created on one computer do no
 - Audit log of activity
 - Secrets live in `.env`, which is excluded from Git. **Never commit `.env`.**
 - No public signup; accounts are provisioned by an administrator
-
----
-
-## Known Limitations
-
-This is a production-oriented foundation, not a completed production system. Before any public deployment, the following should be added or verified:
-
-- An administrator-only user management workflow
-- A CSRF strategy if tokens move to cookies
-- HTTPS
-- Backups and restore tests
-- Monitoring
-- Automated tests
-- Verification of every UI action against the live API
-- API endpoints for batch receiving and full report generation (some report/export screens may need endpoint alignment)
-- Existing demo data is not imported automatically
-
