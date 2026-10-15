@@ -1,56 +1,242 @@
-# WalangBrownout IMS — Laravel + MySQL backend
+WalangBrownout Inventory Management System
 
-This package adds a Laravel 13 JSON API under `laravel-backend/`. The existing React/Vite frontend remains in the project root. Its API base defaults to `http://localhost:8000/api`.
+An inventory management system with batch/expiry tracking, valuation by category and class, role-based access, and an audit log. It consists of a Laravel (PHP) API backend backed by MySQL, and a Vite-based frontend that talks to the API.
 
-## Requirements
-- PHP 8.4+
-- Composer 2
-- MySQL 8+
-- PHP extensions: `pdo_mysql`, `openssl`, `mbstring`, `tokenizer`, `xml`, `ctype`, `curl`, `fileinfo`
+Course / Subject: <fill in> Instructor: <fill in> Group members: <fill in names and roles> Submission date: <fill in>
 
-## 1. Create the MySQL database
-From a MySQL shell:
-```sql
-CREATE DATABASE walangbrownout_ims CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-CREATE USER 'ims_app'@'localhost' IDENTIFIED BY 'choose-a-long-unique-password';
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX ON walangbrownout_ims.* TO 'ims_app'@'localhost';
-```
+Table of Contents
+Features
+Tech Stack
+Project Structure
+Requirements
+Installation Guide
+Running the System
+Default Login
+Setting Up on a New Device (Checklist)
+Troubleshooting
+Security Overview
+Known Limitations
+Screenshots
+Features
+Inventory management with validated stock operations
+Batch tracking with expiry dates
+Dashboard charts: batch expiry overview and inventory valuation by category and class
+Role-based access control enforced on the server
+Secure login with hashed passwords and short-lived tokens, with rate limiting on login
+Audit log of inventory and account activity
+Responsive navigation bar (wraps on small screens, with a horizontally scrollable row)
+The frontend uses the live API by default; it does not silently fall back to mock data
+Tech Stack
+Layer	Technology
+Backend	Laravel (PHP), served with php artisan serve
+Database	MySQL 8.0
+Frontend	Vite (Node.js)
+Dependencies	Composer (PHP), npm (JavaScript)
+Project Structure
+WalangBrownOut_Application-main/
+├── laravel-backend/     # Laravel API (composer.json, artisan, .env.example)
+├── ...                  # Frontend (package.json, .env.example) in the project root
+└── README.md
 
-## 2. Configure Laravel
-```powershell
+Adjust this tree if your frontend lives in a different folder.
+
+Requirements
+
+Install these before cloning or running anything:
+
+Software	Notes
+Git	To clone the repository
+PHP	8.3 or newer (developed on 8.5). Check composer.json for the exact constraint
+Composer 2	PHP dependency manager
+MySQL Server 8.0	The server, not just MySQL Workbench (Workbench is only a client)
+Node.js 18+	Includes npm, needed for the frontend
+Required PHP extensions
+
+fileinfo, mbstring, openssl, curl, zip, pdo_mysql, mysqli, xml
+
+Windows users: PHP ships with these disabled. Open your php.ini (find it with php --ini) and:
+
+Copy php.ini-development to php.ini if php.ini doesn't exist.
+Remove the leading ; from extension_dir = "ext" and from each extension line above.
+Open a new terminal and verify:
+powershell
+php -m | findstr /i "fileinfo mbstring openssl curl zip pdo_mysql"
+Verify your tools
+powershell
+php -v
+composer -V
+node -v
+npm -v
+git --version
+
+and confirm the MySQL service is running:
+
+powershell
+Get-Service *mysql*
+
+(MySQL80 should show Running.)
+
+Installation Guide
+1. Clone the repository
+bash
+git clone <repository-url>
+cd WalangBrownOut_Application-main
+2. Set up the backend
+powershell
 cd laravel-backend
-copy .env.example .env
 composer install
-php artisan key:generate
-```
-Edit `.env` and set DB credentials, `ADMIN_USERNAME`, and a strong `ADMIN_PASSWORD` (12+ characters). Then:
-```powershell
-php artisan migrate --seed
-php artisan serve --host=127.0.0.1 --port=8000
-```
-The seeder creates the first admin only when ADMIN_PASSWORD is set to a non-placeholder value. No public signup is exposed.
 
-## 3. Run the frontend
-Open a second terminal at the repository root:
-```powershell
+Use composer install (not composer update) so you get the exact versions in composer.lock.
+
+You may see Deprecated: PDO::MYSQL_ATTR_SSL_CA ... on PHP 8.5. It is only a warning and does not affect the system.
+
+3. Create the environment file
+powershell
+copy .env.example .env
+php artisan key:generate
+
+(macOS/Linux: cp .env.example .env)
+
+4. Create the database
+
+Open MySQL Workbench (or any MySQL client), connect to 127.0.0.1:3306 as root, and run:
+
+sql
+CREATE DATABASE walangbrownout_ims;
+
+The database name must match DB_DATABASE in .env.
+
+5. Configure .env
+
+Open laravel-backend\.env (the one next to artisan) and set the database section.
+
+Option A: use the root account (simplest for local use)
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=walangbrownout_ims
+DB_USERNAME=root
+DB_PASSWORD=your_mysql_root_password
+
+Option B: use the dedicated ims_app user from the example file
+
+Keep DB_USERNAME=ims_app, choose a password, and put the same one in DB_PASSWORD. Then create the user in MySQL:
+
+sql
+CREATE USER 'ims_app'@'localhost' IDENTIFIED BY 'your_chosen_password';
+GRANT ALL PRIVILEGES ON walangbrownout_ims.* TO 'ims_app'@'localhost';
+FLUSH PRIVILEGES;
+
+Then set the admin account that will be created when the database is seeded:
+
+ADMIN_NAME="Your Name"
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=choose-a-strong-password
+
+Do not leave the placeholder change-this-password. Save the file, and make sure the editor shows no unsaved marker.
+
+If a password contains #, $ or spaces, wrap it in double quotes.
+
+6. Create the tables and the admin account
+powershell
+php artisan config:clear
+php artisan migrate --seed
+
+You should see the migrations listed as DONE. The admin user is created only when ADMIN_PASSWORD is set and no admin account exists yet.
+
+7. Set up the frontend
+
+From the project root (where the frontend's package.json is):
+
+powershell
 npm install
 copy .env.example .env
+
+In that .env, point the frontend at the API:
+
+VITE_API_BASE_URL=http://127.0.0.1:8000
+
+(Match whatever base path the API uses, for example /api.)
+
+Running the System
+
+Use two terminals.
+
+Terminal 1: backend (inside laravel-backend)
+
+powershell
+php artisan serve
+
+The API runs at http://127.0.0.1:8000.
+
+Terminal 2: frontend (project root)
+
+powershell
 npm run dev
-```
-The root `.env` should contain `VITE_API_BASE_URL=http://localhost:8000/api`.
 
-## API capabilities
-- Bearer-token login and `/auth/me`; hashed passwords and hashed opaque access tokens.
-- Role-checked item create/edit/archive and user management.
-- Stock receipt creates a batch and computes expiry from shelf life when not supplied.
-- Stock issue deducts FEFO (earliest expiry first), inside a database transaction and row locks; expired lots are excluded.
-- Stock adjustments require a reason and prevent negative balances.
-- Movement history and audit log record the actor.
-- Supplier creation/listing and purchase order create/receipt endpoints.
-- Dashboard summary and reorder suggestions.
+Open the URL Vite prints (usually http://localhost:5173) in your browser.
 
-## Endpoint summary
-`POST /api/auth/login`, `GET /api/auth/me`, `GET/POST /api/items`, `PUT /api/items/{id}`, `POST /api/items/{id}/archive`, `GET /api/batches`, `POST /api/stock/receive`, `POST /api/stock/issue`, `POST /api/stock/adjust`, `GET /api/reports/movements`, `GET /api/reports/reorder-suggestions`, `GET/POST /api/suppliers`, `GET/POST /api/purchase-orders`, `POST /api/purchase-orders/{id}/receive`, `GET/POST/PATCH /api/users`, `GET/PATCH /api/alerts`, `GET /api/dashboard/summary`.
+Default Login
 
-## Important integration note
-The Laravel API is a backend implementation, but the existing React pages were originally written against the earlier API contract. The frontend currently reads the common item/batch/alert/dashboard endpoints; dedicated receive, FEFO issue, adjustment, supplier and purchase-order forms still need to be wired to these new endpoints in the UI before every requested workflow is available to warehouse users. Run tests and verify all workflows before production deployment. Configure HTTPS, backups, monitoring, least-privilege DB credentials and scheduled backup/restore drills before real use.
+Log in with the ADMIN_USERNAME and ADMIN_PASSWORD you set in laravel-backend\.env before seeding.
+
+Field	Value
+Username	<value of ADMIN_USERNAME>
+Password	<value of ADMIN_PASSWORD>
+
+For the teacher's demo, you may write the demo credentials here. Do not use a real or reused password.
+
+Changing .env after the admin account has been created does not update the existing account. To reset it, change the password through the app or with php artisan tinker.
+
+Setting Up on a New Device (Checklist)
+
+Files such as vendor/, node_modules/ and .env are not stored in Git, so a fresh clone needs them recreated:
+
+ Install Git, PHP (with extensions enabled), Composer, Node.js, MySQL Server
+ git clone the repository
+ composer install in laravel-backend
+ Copy .env.example to .env, then php artisan key:generate
+ Create the MySQL database and set the DB_* values
+ Set ADMIN_* values
+ php artisan migrate --seed
+ npm install and create the frontend .env
+ Start both servers
+
+The database is local to each device. Accounts created on one computer do not exist on another unless you export the database (mysqldump or Workbench: Server → Data Export) and import it on the new device.
+
+Troubleshooting
+Problem	Cause and fix
+Your requirements could not be resolved ... ext-fileinfo is missing	A PHP extension is disabled. Enable it in php.ini (see Requirements), open a new terminal, and run composer install again. Do not use --ignore-platform-req.
+SQLSTATE[HY000] [1045] Access denied for user ...	DB_USERNAME / DB_PASSWORD in .env don't match a real MySQL user. Check the saved file with type .env | findstr DB_, use root with your root password or create the user (Option B), then run php artisan config:clear.
+Unknown database	The database in DB_DATABASE doesn't exist yet. Create it in MySQL with the same name.
+Connection refused	MySQL isn't running. Check with Get-Service *mysql* and start it (net start MySQL80 in an administrator terminal).
+.env changes seem ignored	Run php artisan config:clear. Also check that no Windows environment variable such as DB_USERNAME overrides it (echo $env:DB_USERNAME).
+Can't log in	The seeder may not have run, or ADMIN_* held placeholders when it did. Check the users table in Workbench, or reset the password with php artisan tinker.
+Login works on one PC but not another	Each PC has its own database. Seed the new one or import an export from the first.
+composer or php artisan fails with "not recognized"	Run commands inside laravel-backend (where artisan and composer.json are), and make sure PHP and Composer are on your PATH.
+Frontend can't reach the API	The backend isn't running, or VITE_API_BASE_URL is wrong. Restart npm run dev after editing the frontend .env.
+Deprecated: PDO::MYSQL_ATTR_SSL_CA on PHP 8.5	A harmless warning. Ignore it, or update the constant in config/database.php if everyone uses PHP 8.5.
+Security Overview
+Passwords are stored as bcrypt hashes
+Short-lived authentication tokens (JWT)
+Server-side role authorization on protected endpoints
+Rate limiting on login attempts
+Security headers on API responses
+Validation on inventory operations
+Audit log of activity
+Secrets live in .env, which is excluded from Git. Never commit .env.
+No public signup; accounts are provisioned by an administrator
+Known Limitations
+
+This is a production-oriented foundation, not a completed production system. Before any public deployment, the following should be added or verified:
+
+An administrator-only user management workflow
+A CSRF strategy if tokens move to cookies
+HTTPS
+Backups and restore tests
+Monitoring
+Automated tests
+Verification of every UI action against the live API
+API endpoints for batch receiving and full report generation (some report/export screens may need endpoint alignment)
+Existing demo data is not imported automatically
