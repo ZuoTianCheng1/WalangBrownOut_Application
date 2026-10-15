@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react';
 import { useAuth } from './AuthContext.jsx';
 import { useSettings } from './SettingsContext.jsx';
 import { getItems, getBatches, getAlerts, resolveAlert as resolveAlertApi, createItem as createItemApi, consumeBatch as consumeBatchApi, deleteBatch as deleteBatchApi, purgeExpiredBatches as purgeExpiredBatchesApi } from '../services/api.js';
@@ -30,6 +30,15 @@ export function InventoryProvider({ children }) {
   }, [reloadItems, reloadBatches, reloadAlerts]);
 
   useEffect(() => { if (batches) reloadBatches(); }, [settings.nearExpiryDays]);
+
+  // Stock changes (sale, receipt, adjustment...) can raise or clear reorder/expiry alerts on the server,
+  // so re-fetch them whenever batches change after the first load.
+  const alertsSeeded = useRef(false);
+  useEffect(() => {
+    if (!batches) return;
+    if (!alertsSeeded.current) { alertsSeeded.current = true; return; }
+    reloadAlerts();
+  }, [batches, reloadAlerts]);
 
   useEffect(() => {
     if (!items || !batches) return;

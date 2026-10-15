@@ -57,7 +57,7 @@ function normalizeHistory(h) {
 function normalizeBatch(b) { return { ...b, history: (b.history || []).map(normalizeHistory) }; }
 function normalizeAlert(a) {
   const m = a.meta;
-  const meta = m == null ? '' : typeof m === 'string' ? m : Array.isArray(m) ? m.join(' · ') : Object.values(m).join(' · ');
+  const meta = m == null ? '' : typeof m === 'string' ? m : Array.isArray(m) ? m.join(' · ') : Object.entries(m).filter(([k]) => !k.startsWith('_')).map(([, v]) => v).join(' · ');
   return { ...a, meta, resolved: !!a.resolved };
 }
 
