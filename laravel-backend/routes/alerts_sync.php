@@ -28,6 +28,18 @@ use Illuminate\Support\Facades\DB;
 if (!defined('IMS_NEAR_EXPIRY_DAYS')) define('IMS_NEAR_EXPIRY_DAYS', 30);
 if (!defined('IMS_CRITICAL_EXPIRY_DAYS')) define('IMS_CRITICAL_EXPIRY_DAYS', 7);
 
+/**
+ * Route middleware: after any successful write request (POST/PUT/PATCH/DELETE), re-sync alerts.
+ * Registered by class name in routes/api.php (Route::middleware() only accepts strings, not closures).
+ */
+class ImsSyncAlertsMiddleware {
+  public function handle($request, \Closure $next) {
+    $response = $next($request);
+    if (!$request->isMethod('GET') && $response->getStatusCode() < 400) ims_sync_alerts();
+    return $response;
+  }
+}
+
 /** Never throws: a problem here must not break the request that triggered it. */
 function ims_sync_alerts(?string $today = null): void {
   $fh = null;
@@ -57,7 +69,7 @@ function ims_alert_insert(string $kind, string $tier, $itemId, $batchId, string 
 }
 /** Update an open alert in place; skips the write when nothing changed. */
 function ims_alert_refresh($a, string $kind, string $tier, string $title, array $meta, string $now): void {
-  if ($a->kind === $kind && $a->tier === $tier && $a->title === $title && ims_alert_meta($a) === $meta) return;
+  if ($a->kind === $kind && $a->tier === $tier && $a->title === $title && ims_alert_meta($a) == $meta) return;   // == : MySQL JSON reorders keys
   DB::update('UPDATE alerts SET kind = ?, tier = ?, title = ?, meta = ?, updated_at = ? WHERE id = ?', [$kind, $tier, $title, json_encode($meta), $now, $a->id]);
 }
 /** Resolve an open alert on the system's behalf and mark its episode as over. */
